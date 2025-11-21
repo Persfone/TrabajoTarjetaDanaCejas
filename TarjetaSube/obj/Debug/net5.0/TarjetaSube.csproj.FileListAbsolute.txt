@@ -14,3 +14,11 @@ C:\Users\PC\source\repos\TarjetaSube\TarjetaSube\obj\Debug\net5.0\TarjetaSube.dl
 C:\Users\PC\source\repos\TarjetaSube\TarjetaSube\obj\Debug\net5.0\ref\TarjetaSube.dll
 C:\Users\PC\source\repos\TarjetaSube\TarjetaSube\obj\Debug\net5.0\TarjetaSube.pdb
 C:\Users\PC\source\repos\TarjetaSube\TarjetaSube\obj\Debug\net5.0\TarjetaSube.genruntimeconfig.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.csproj.AssemblyReference.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.AssemblyInfoInputs.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.AssemblyInfo.cs
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.csproj.CoreCompileInputs.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.sourcelink.json
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.dll
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSube\obj\Debug\net5.0\TarjetaSube.pdb

@@ -1,0 +1,8 @@
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net9.0\.msCoverageSourceRootsMapping_TarjetaSubeTest
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net9.0\CoverletSourceRootsMapping_TarjetaSubeTest
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net9.0\TarjetaSubeTest.csproj.AssemblyReference.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net9.0\TarjetaSubeTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net9.0\TarjetaSubeTest.AssemblyInfoInputs.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net9.0\TarjetaSubeTest.AssemblyInfo.cs
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net9.0\TarjetaSubeTest.csproj.CoreCompileInputs.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net9.0\TarjetaSubeTest.sourcelink.json

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;  
 
+
 public class Tarjeta
 {
     private double saldo = 0;
@@ -29,7 +30,7 @@ public class Tarjeta
     }
 
 
-    internal bool Pagar(double monto)
+    public bool Pagar(double monto)
     {
         if (saldo >= monto)
         {
