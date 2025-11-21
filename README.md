@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/mgonzalesips/TrabajoTarjeta2025/graph/badge.svg?token=XI7V37W69W)](https://codecov.io/gh/mgonzalesips/TrabajoTarjeta2025)
+[![codecov](https://codecov.io/gh/Persfone/TrabajoTarjetaDanaCejas/graph/badge.svg?token=BQQHG2VQLD)](https://codecov.io/gh/Persfone/TrabajoTarjetaDanaCejas)
 
 ## Mesa Diciembre (3/12)
 
