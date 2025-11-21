@@ -113,4 +113,36 @@ public class TarjetaTests
         Assert.IsFalse(resultado);
         Assert.AreEqual(0, tarjeta.Saldo);
     }
+
+    [Test]
+    public void CargarTodosLosMontosValidos_DebeAceptarTodos()
+    {
+        double[] montos = { 2000, 3000, 4000, 5000, 8000, 10000, 15000, 20000, 25000, 30000 };
+
+        foreach (double m in montos)
+        {
+            Tarjeta t = new Tarjeta();
+            Assert.IsTrue(t.Cargar(m), $"Falla con el monto {m}");
+            Assert.AreEqual(m, t.Saldo);
+        }
+    }
+
+    [Test]
+    public void FlujoCompleto_CargarPagarPagarEmitirBoletos()
+    {
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(5000); // suficiente para dos viajes
+
+        var colectivo = new TarjetaSube.Colectivo("123 Roja");
+
+        var b1 = colectivo.PagarCon(tarjeta);
+        Assert.IsNotNull(b1); // primer viaje
+
+        var b2 = colectivo.PagarCon(tarjeta);
+        Assert.IsNotNull(b2); // segundo viaje
+
+        Assert.AreEqual(5000 - 1580 * 2, tarjeta.Saldo);
+    }
+
+
 }
