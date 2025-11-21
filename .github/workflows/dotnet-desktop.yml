@@ -18,11 +18,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-   
-    - name: Setup .NET 5.0
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '5.0.x'
+        dotnet-version: '8.0.x'
 
     - name: Restore dependencies
       run: dotnet restore
@@ -37,4 +36,5 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./**/coverage.cobertura.xml
+        file: ./**/coverage.cobertura.xml
+        fail_ci_if_error: true
