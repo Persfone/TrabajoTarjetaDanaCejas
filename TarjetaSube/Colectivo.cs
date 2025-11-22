@@ -12,15 +12,21 @@ namespace TarjetaSube
             this.linea = linea;
         }
 
-        public Boleto PagarCon(Tarjeta tarjeta)
+        public bool PagarCon(Tarjeta tarjeta, out Boleto? boleto) //out es una forma en la q una funcion puede devolver mas de un valor
         {
-            if (tarjeta.Pagar(TARIFA_BASICA))
+            if (tarjeta.Pagar(Colectivo.TARIFA_BASICA))
             {
-                return new Boleto(linea, tarjeta.Saldo);
+                boleto = new Boleto(linea, tarjeta.Saldo);
+                return true;
             }
-            return null;
+
+            boleto = null;
+            return false;
         }
+
 
         public string ObtenerLinea() => linea;
     }
 }
+
+
