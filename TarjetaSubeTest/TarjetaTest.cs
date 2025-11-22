@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using System;
 using System.Linq;
+using TarjetaSube;
 
 [TestFixture]
 public class TarjetaTests
@@ -143,6 +144,41 @@ public class TarjetaTests
 
         Assert.AreEqual(5000 - 1580 * 2, tarjeta.Saldo);
     }
+
+    [Test]
+    public void FranquiciaCompletaSiemprePaga()
+    {
+        var tarjeta = new FranquiciaCompleta();
+        var colectivo = new Colectivo("122");
+
+        Boleto boleto1 = colectivo.PagarCon(tarjeta);
+        Boleto boleto2 = colectivo.PagarCon(tarjeta);
+        Boleto boleto3 = colectivo.PagarCon(tarjeta);
+
+        Assert.IsNotNull(boleto1);
+        Assert.IsNotNull(boleto2);
+        Assert.IsNotNull(boleto3);
+    }
+
+
+    [Test]
+    public void MedioBoletoPagaLaMitad()
+    {
+        var tarjeta = new MedioBoleto();
+        var colectivo = new Colectivo("122");
+
+        tarjeta.Cargar(2000); // saldo suficiente
+        double esperado = Colectivo.TARIFA_BASICA / 2;
+
+        double saldoAntes = tarjeta.Saldo;
+
+        Boleto boleto = colectivo.PagarCon(tarjeta);
+
+        Assert.IsNotNull(boleto);  // pago exitoso
+
+        Assert.AreEqual(saldoAntes - esperado, tarjeta.Saldo);
+    }
+
 
 
 }
