@@ -146,6 +146,7 @@ public class TarjetaTests
     }
 
     [Test]
+<<<<<<< HEAD
     public void FranquiciaCompletaSiemprePaga()
     {
         var tarjeta = new FranquiciaCompleta();
@@ -179,6 +180,46 @@ public class TarjetaTests
         Assert.AreEqual(saldoAntes - esperado, tarjeta.Saldo);
     }
 
+    public void NoDebePermitirSaldoMenorA1200Negativo()
+    {
+        Tarjeta t = new Tarjeta();
 
+        // La tarifa es 1580
+        bool pago1 = t.Pagar(1580); // saldo = -1580 → NO debe permitirlo
+                                    // pero debe permitir hasta -1200
+
+        Assert.IsFalse(pago1);
+    }
+
+    [Test]
+    public void DebePermitirLlegarAlLimiteNegativo()
+    {
+        Tarjeta t = new Tarjeta();
+
+        // Permite hasta -1200
+        bool pago1 = t.Pagar(1200); // saldo = -1200 → válido
+        Assert.IsTrue(pago1);
+
+        // Esto ya no debe permitirlo
+        bool pago2 = t.Pagar(1); // -1201 → inválido
+        Assert.IsFalse(pago2);
+    }
+
+    [Test]
+    public void DebeDescontarViajePlusAlCargar()
+    {
+        Tarjeta t = new Tarjeta();
+
+        // Queda en saldo negativo
+        bool pago1 = t.Pagar(1200); // saldo = -1200
+        Assert.IsTrue(pago1);
+
+        // Ahora carga dinero
+        bool carga = t.Cargar(2000);
+        Assert.IsTrue(carga);
+
+        // Debe haber descontado automáticamente el saldo negativo
+        Assert.AreEqual(800, t.Saldo);
+    }
 
 }
