@@ -30,7 +30,7 @@ public class Tarjeta
     }
 
 
-    public bool Pagar(double monto)
+    public virtual bool Pagar(double monto)
     {
         if (saldo >= monto)
         {
@@ -38,5 +38,31 @@ public class Tarjeta
             return true;
         }
         return false;
+    }
+}
+
+public class MedioBoleto : Tarjeta
+{
+    public override bool Pagar(double monto)
+    {
+        double medio = monto / 2;
+        return base.Pagar(medio);
+    }
+}
+
+public class BoletoGratuito : Tarjeta
+{
+    public override bool Pagar(double monto)
+    {
+        return base.Pagar(0);
+    }
+}
+
+
+public class FranquiciaCompleta : Tarjeta
+{
+    public override bool Pagar(double monto)
+    {
+        return true; // nunca falla
     }
 }
