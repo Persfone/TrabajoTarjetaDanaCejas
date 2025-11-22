@@ -146,7 +146,6 @@ public class TarjetaTests
     }
 
     [Test]
-<<<<<<< HEAD
     public void FranquiciaCompletaSiemprePaga()
     {
         var tarjeta = new FranquiciaCompleta();
