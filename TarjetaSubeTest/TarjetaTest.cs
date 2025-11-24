@@ -100,7 +100,7 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 1580).Within(0.01));
     }
-    */
+  
     [Test]
     public void Pagar_BoletoGratuito_NoDescuentaNada()
     {
@@ -114,7 +114,7 @@ public class TarjetaTests
 
         Assert.That(tarjeta.Saldo, Is.EqualTo(3000).Within(0.01));
     }
-    */
+   */
     [Test]
     public void Pagar_FranquiciaCompleta_SiemprePermiteViajeSinDescontar()
     {
@@ -231,6 +231,7 @@ public class TarjetaTests
     {
         var clock = new FakeClock { Now = new DateTime(2025, 4, 5, 10, 0, 0) };
         var tarjeta = new BoletoGratuito(clock);
+        tarjeta.Cargar(2000);
         // 1° y 2° viaje → gratis
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);

@@ -30,15 +30,7 @@ namespace TarjetaSube
         }
     }
 
-    public class MedioBoleto : Tarjeta
-    {
-        public override bool Pagar(double monto)
-        {
-            return base.Pagar(monto / 2.0);
-        }
-    }
 
-<<<<<<< HEAD
 public class MedioBoleto : Tarjeta
 {
     private readonly IClock _clock;
@@ -87,11 +79,7 @@ public class MedioBoleto : Tarjeta
         return resultado;
     }
 }
-// Boleto gratuito (discapacidad, etc.)
-public class BoletoGratuito : Tarjeta
-{
-    public override bool Pagar(double monto)
-=======
+
     public class BoletoGratuito : Tarjeta
     {
         private readonly IClock _clock;
@@ -128,7 +116,6 @@ public class BoletoGratuito : Tarjeta
     }
 
     public class FranquiciaCompleta : Tarjeta
->>>>>>> b0d8f9b7cd9ae8145b22204df8aa27f9614eaa6f
     {
         public override bool Pagar(double monto)
         {
@@ -145,23 +132,4 @@ public class BoletoGratuito : Tarjeta
     {
         public DateTime Now => DateTime.Now;
     }
-}
-// ← AQUÍ VAN IClock y SystemClock
-
-public interface IClock
-
-{
-
-    DateTime Now { get; }
-
-}
-
-
-
-public class SystemClock : IClock
-
-{
-
-    public DateTime Now => DateTime.Now;
-
 }
