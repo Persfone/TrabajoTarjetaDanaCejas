@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TarjetaSube")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b31c659b5d8cc4e630cf820544cd33480c72712a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d97337b1915da337d16978d0695956ab410f22f1")]
 [assembly: System.Reflection.AssemblyProductAttribute("TarjetaSube")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TarjetaSube")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
