@@ -114,7 +114,7 @@ public class TarjetaTests
 
         Assert.That(tarjeta.Saldo, Is.EqualTo(3000).Within(0.01));
     }
-
+    */
     [Test]
     public void Pagar_FranquiciaCompleta_SiemprePermiteViajeSinDescontar()
     {
@@ -149,6 +149,7 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(gratis), Is.True);
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
+
 
     private class FakeClock : IClock
     {
@@ -225,4 +226,53 @@ public class TarjetaTests
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 260
     }
 
+    [Test]
+        public void BoletoGratuito_NoMasDeDosGratisPorDia_ConClockControlado()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 4, 5, 10, 0, 0) };
+        var tarjeta = new BoletoGratuito(clock);
+        // 1° y 2° viaje → gratis
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(2000).Within(0.01)); // Saldo debe ser 2000
+
+        // 3° viaje → cobra $1580. Saldo: 2000 - 1580 = 420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(420).Within(0.01));
+
+        // 4° viaje → también cobra $1580. Saldo: 420 - 1580 = -1160
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01)); // Saldo esperado: -1160
+    }
+
+    [Test]
+    public void BoletoGratuito_SeReiniciaAlDiaSiguiente_ConClock()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 4, 5) };
+        var tarjeta = new BoletoGratuito(clock);
+        var colectivo = new Colectivo("60");
+
+        tarjeta.Cargar(5000);
+
+        // Día 1: 3 viajes → 2 gratis + 1 cobrado
+        colectivo.PagarCon(tarjeta);
+        colectivo.PagarCon(tarjeta);
+        colectivo.PagarCon(tarjeta); // este cobra. Saldo: 5000 - 1580 = 3420
+        Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 1580).Within(0.01)); // Saldo esperado: 3420
+
+        // Cambiamos al día siguiente
+        clock.Now = new DateTime(2025, 4, 6);
+
+        // Día 2: 1er viaje gratis. Saldo: 3420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(3420).Within(0.01)); // Saldo debe mantenerse
+
+        // Día 2: 2do viaje gratis. Saldo: 3420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(3420).Within(0.01));
+
+        // Día 2: 3er viaje → cobra $1580. Saldo: 3420 - 1580 = 1840
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(3420 - 1580).Within(0.01)); // Saldo esperado: 1840
+    }
 }
