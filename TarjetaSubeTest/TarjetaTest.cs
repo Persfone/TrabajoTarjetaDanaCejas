@@ -45,17 +45,20 @@ public class TarjetaTests
         Assert.That(tarjeta.Saldo, Is.EqualTo(10000).Within(0.01));
     }
 
+    /*
     [Test]
     public void Cargar_SaldoSuperaLimite_NoPermiteCarga()
     {
         var tarjeta = new Tarjeta();
         tarjeta.Cargar(30000);
-        tarjeta.Cargar(10000);
+        tarjeta.Cargar(20000);
+        tarjeta.Cargar(4000);
+        tarjeta.Cargar(2000);
 
         Assert.That(tarjeta.Cargar(2000), Is.False);
-        Assert.That(tarjeta.Saldo, Is.EqualTo(40000).Within(0.01));
+        Assert.That(tarjeta.Saldo, Is.EqualTo(56000).Within(0.01));
     }
-
+    */
     [Test]
     public void Pagar_SaldoNoPuedeQuedarPorDebajoDeNegativoMaximo()
     {
@@ -149,7 +152,6 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(gratis), Is.True);
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
-
 
     private class FakeClock : IClock
     {
@@ -275,5 +277,76 @@ public class TarjetaTests
         // Día 2: 3er viaje → cobra $1580. Saldo: 3420 - 1580 = 1840
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(3420 - 1580).Within(0.01)); // Saldo esperado: 1840
+    }
+    [Test]
+    public void Cargar_ExcedenteQuedaPendiente_SiSuperaElLimite()
+    {
+        var tarjeta = new Tarjeta();
+        const double LIMITE_MAXIMO = 56000;
+
+        const double MONTO_INICIAL = 30000;
+        const double MONTO_CARGA_EXCESO = 30000;
+
+        // 1. Cargamos un monto inicial
+        Assert.That(tarjeta.Cargar(MONTO_INICIAL), Is.True, "La carga inicial de 30000 debe ser exitosa.");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(MONTO_INICIAL).Within(0.01)); // Saldo: 30000
+
+        // 2. Intentamos cargar 30000. Saldo potencial: 30000 + 30000 = 60000 (Supera 56000)
+        Assert.That(tarjeta.Cargar(MONTO_CARGA_EXCESO), Is.True, "La segunda carga debe ser exitosa (aunque parcial).");
+
+        // 3. Verificamos que el saldo solo llegó al límite
+        double saldoAcreditado = LIMITE_MAXIMO; // 56000
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoAcreditado).Within(0.01), "El saldo acreditado debe ser exactamente el límite máximo (56000).");
+
+        // 4. Verificamos el excedente pendiente
+        double excedentePendiente = (MONTO_INICIAL + MONTO_CARGA_EXCESO) - LIMITE_MAXIMO; // 60000 - 56000 = 4000
+        Assert.That(tarjeta.SaldoPendiente, Is.EqualTo(excedentePendiente).Within(0.01), "El excedente de 4000 debe quedar como saldo pendiente.");
+    }
+
+
+    [Test]
+    public void Pagar_AcreditaSaldoPendiente_DespuesDeCadaViaje()
+    {
+        var tarjeta = new Tarjeta();
+        const double TARIFA = 1580;
+        const double LIMITE_MAXIMO = 56000;
+        const double MONTO_CARGA_1 = 30000;
+        const double MONTO_CARGA_2 = 30000;
+        const double EXCEDENTE_TOTAL = 4000; // (30000 + 30000) - 56000
+
+        // 1. Dejamos la tarjeta con saldo pendiente.
+        tarjeta.Cargar(MONTO_CARGA_1); // Saldo: 30000. Pendiente: 0.
+        Assert.That(tarjeta.Cargar(MONTO_CARGA_2), Is.True, "La segunda carga debe ser parcial y exitosa.");
+
+        // Saldo inicial acreditado: 56000. Pendiente: 4000.
+        Assert.That(tarjeta.Saldo, Is.EqualTo(LIMITE_MAXIMO).Within(0.01));
+        Assert.That(tarjeta.SaldoPendiente, Is.EqualTo(EXCEDENTE_TOTAL).Within(0.01));
+
+        // --- PRIMER VIAJE: Descuenta tarifa y acredita inmediatamente ---
+
+        // Saldo después del débito: 56000 - 1580 = 54420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+
+        // Saldo ACREDITADO: 1580 (lo que se usó)
+        // Saldo Final: 54420 + 1580 = 56000 (Vuelve al límite)
+        Assert.That(tarjeta.Saldo, Is.EqualTo(LIMITE_MAXIMO).Within(0.01), "El saldo debe volver al límite tras la acreditación.");
+
+        // Nuevo Saldo Pendiente: 4000 - 1580 = 2420
+        double saldoPendienteDespuesViaje1 = EXCEDENTE_TOTAL - TARIFA;
+        Assert.That(tarjeta.SaldoPendiente, Is.EqualTo(saldoPendienteDespuesViaje1).Within(0.01), "El saldo pendiente debe reducirse en 1580.");
+
+
+        // --- SEGUNDO VIAJE: Descuenta y acredita el resto del saldo pendiente ---
+
+        // Saldo después del débito: 56000 - 1580 = 54420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+
+        // Saldo ACREDITADO: 1580 (lo que se usó)
+        // Saldo Final: 54420 + 1580 = 56000 (Vuelve al límite)
+        Assert.That(tarjeta.Saldo, Is.EqualTo(LIMITE_MAXIMO).Within(0.01), "El saldo debe volver al límite tras la segunda acreditación.");
+
+        // Nuevo Saldo Pendiente: 2420 - 1580 = 840
+        double saldoPendienteDespuesViaje2 = saldoPendienteDespuesViaje1 - TARIFA;
+        Assert.That(tarjeta.SaldoPendiente, Is.EqualTo(saldoPendienteDespuesViaje2).Within(0.01), "El saldo pendiente final debe ser 840.");
     }
 }
