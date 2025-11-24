@@ -87,7 +87,7 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(10000 - 3160).Within(0.01));
     }
-
+    /*
     [Test]
     public void Pagar_MedioBoleto_DesuentaExactamenteLaMitad()
     {
@@ -100,7 +100,7 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 1580).Within(0.01));
     }
-
+    */
     [Test]
     public void Pagar_BoletoGratuito_NoDescuentaNada()
     {
@@ -149,4 +149,80 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(gratis), Is.True);
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
+
+    private class FakeClock : IClock
+    {
+        public DateTime Now { get; set; }
+    }
+
+    [Test]
+    public void MedioBoleto_RestriccionDe5Minutoso()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 5, 1, 9, 0, 0) };
+        var tarjeta = new MedioBoleto(clock);
+        var colectivo = new Colectivo("144");
+
+        tarjeta.Cargar(2000);
+
+        // --- VIAJE 1: Exitoso (Medio Boleto) ---
+        // Saldo: 2000 - 790 = 1210
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "El primer viaje debe ser aceptado.");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01)); // Saldo esperado 1210
+
+        // --- VIAJE 2: Rechazo por Tiempo (< 5 minutos) ---
+        clock.Now = clock.Now.AddMinutes(4);
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.False, "El pago debe ser rechazado si no pasaron 5 minutos.");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01), "El saldo NO debe cambiar tras el rechazo por tiempo.");
+
+        // --- VIAJE 3: Exitoso (Medio Boleto) después de 5 minutos ---
+        // Avanzamos el tiempo para que hayan pasado 5 minutos desde el Viaje 1.
+        clock.Now = new DateTime(2025, 5, 1, 9, 5, 0);
+
+        // ✅ AJUSTE: Saldo: 1210 - 790 = 420 (Viaje 2 con descuento del día)
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "El pago debe ser aceptado al pasar los 5 minutos.");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(420).Within(0.01)); // Saldo esperado 420
+    }
+
+    [Test]
+    public void MedioBoleto_MaximoDosViajesConDescuentoPorDia_TercerViajeCobraCompleto()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 6, 10, 8, 0, 0) };
+        var tarjeta = new MedioBoleto(clock);
+        var colectivo = new Colectivo("60");
+
+        // Cargamos saldo suficiente (5000) para 2 MB + 2 viajes completos sin alcanzar el límite negativo.
+        tarjeta.Cargar(5000);
+        double saldoEsperado = 5000;
+
+        // --- VIAJE 1: Aplica Descuento (790) ---
+        // Saldo: 5000 - 790 = 4210
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 1 debe aplicar medio boleto.");
+        saldoEsperado -= 790;
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
+        clock.Now = clock.Now.AddMinutes(6); // Esperamos > 5 min
+
+        // --- VIAJE 2: Aplica Descuento (790) ---
+        // Saldo: 4210 - 790 = 3420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 2 debe aplicar medio boleto.");
+        saldoEsperado -= 790;
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 3420
+        clock.Now = clock.Now.AddMinutes(6);
+
+        // --- VIAJE 3: COBRA TARIFA COMPLETA (1580) ---
+        // Se agota el límite diario de descuentos.
+        // Saldo: 3420 - 1580 = 1840
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 3 debe cobrar la tarifa completa (1580).");
+        saldoEsperado -= 1580;
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 1840
+        Assert.That(tarjeta.Saldo, Is.Not.EqualTo(1840 - 790).Within(0.01), "Verifica que el saldo NO es el de un medio boleto.");
+        clock.Now = clock.Now.AddMinutes(6);
+
+        // --- VIAJE 4: COBRA TARIFA COMPLETA (1580) ---
+        // Saldo: 1840 - 1580 = 260
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 4 debe seguir cobrando tarifa completa.");
+        saldoEsperado -= 1580;
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 260
+    }
+
 }

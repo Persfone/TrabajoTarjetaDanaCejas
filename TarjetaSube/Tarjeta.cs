@@ -34,16 +34,54 @@ public class Tarjeta
     }
 }
 
-// Tarjeta con medio boleto (estudiante, jubilado, etc.)
 public class MedioBoleto : Tarjeta
 {
-    public override bool Pagar(double monto)
+    private readonly IClock _clock;
+    private DateTime? _ultimoViajeFecha = null;
+    private int _viajesHoy = 0;
+
+    public MedioBoleto(IClock clock = null)
     {
-        double medio = monto / 2.0;
-        return base.Pagar(medio); // paga el 50%
+        _clock = clock ?? new SystemClock();
+    }
+
+    public override bool Pagar(double monto) // monto SIEMPRE es TARIFA_BASICA (1580)
+    {
+        DateTime ahora = _clock.Now;
+        DateTime hoy = ahora.Date;
+
+        // Reiniciar contador si es un nuevo día
+        if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
+        {
+            _viajesHoy = 0;
+        }
+
+        // Verificar intervalo de 5 minutos
+        // Nota: El primer viaje de la tarjeta siempre pasa, ya que _ultimoViajeFecha es null.
+        if (_ultimoViajeFecha.HasValue)
+        {
+            TimeSpan diferencia = ahora - _ultimoViajeFecha.Value;
+            if (diferencia < TimeSpan.FromMinutes(5))
+            {
+                return false; // ¡No puede viajar tan rápido!
+            }
+        }
+
+        // 1. Determinar el monto real a debitar (790 o 1580)
+        double montoADescontar = _viajesHoy < 2 ? monto / 2.0 : monto;
+
+        // 2. Intentar pagar el monto ya ajustado. 
+        bool resultado = base.Pagar(montoADescontar); // base.Pagar(790) o base.Pagar(1580)
+
+        if (resultado)
+        {
+            _viajesHoy++;
+            _ultimoViajeFecha = ahora;
+        }
+
+        return resultado;
     }
 }
-
 // Boleto gratuito (discapacidad, etc.)
 public class BoletoGratuito : Tarjeta
 {
@@ -61,4 +99,23 @@ public class FranquiciaCompleta : Tarjeta
         // Nunca descuenta saldo y siempre permite el viaje
         return true;
     }
+}
+// ← AQUÍ VAN IClock y SystemClock
+
+public interface IClock
+
+{
+
+    DateTime Now { get; }
+
+}
+
+
+
+public class SystemClock : IClock
+
+{
+
+    public DateTime Now => DateTime.Now;
+
 }
