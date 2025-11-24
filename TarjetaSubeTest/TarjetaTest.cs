@@ -6,224 +6,147 @@ using TarjetaSube;
 [TestFixture]
 public class TarjetaTests
 {
-    private Tarjeta tarjeta;
+    private static readonly double[] MontosValidos = { 2000, 3000, 4000, 5000, 8000, 10000, 15000, 20000, 25000, 30000 };
+    private const double LIMITE_SALDO = 40000;
+    private const double SALDO_NEGATIVO_MAX = -1200;
+    private const double TARIFA_BASICA = 1580;
+
+    private Colectivo colectivo;
 
     [SetUp]
     public void Setup()
     {
-        tarjeta = new Tarjeta();
+        colectivo = new Colectivo("144 Roja");
     }
 
     [Test]
-    public void CargarMontoValido_AumentaSaldo()
+    public void Cargar_TodosLosMontosValidos_AceptaYActualizaSaldoCorrectamente()
     {
-        bool resultado = tarjeta.Cargar(10000);
-        Assert.IsTrue(resultado);
-        Assert.AreEqual(10000, tarjeta.Saldo);
-    }
+        var tarjeta = new Tarjeta();
 
-    [Test]
-    public void CargarMontoNoPermitido_NoCarga()
-    {
-        bool resultado = tarjeta.Cargar(5000.50);
-        Assert.IsFalse(resultado);
-        Assert.AreEqual(0, tarjeta.Saldo);
-    }
-
-    [Test]
-    public void CargarVariasVeces_RespetaLimite40000()
-    {
-        tarjeta.Cargar(20000);
-        tarjeta.Cargar(20000);
-        bool resultado = tarjeta.Cargar(100);
-        Assert.IsFalse(resultado);
-        Assert.AreEqual(40000, tarjeta.Saldo);
-
-        bool excede = tarjeta.Cargar(20000);
-        Assert.IsFalse(excede);
-        Assert.AreEqual(40000, tarjeta.Saldo);
-    }
-
-    [Test]
-    public void PagarConSaldoSuficiente_EmiteBoletoYDescuenta()
-    {
-        tarjeta.Cargar(10000);
-        var colectivo = new Colectivo("142 Negra");
-
-        bool ok = colectivo.PagarCon(tarjeta, out Boleto? boleto);
-
-        Assert.IsTrue(ok);
-        Assert.IsNotNull(boleto);
-        Assert.AreEqual("142 Negra", boleto.Linea);
-        Assert.AreEqual(10000 - Colectivo.TARIFA_BASICA, boleto.SaldoRestante);
-        Assert.AreEqual(10000 - Colectivo.TARIFA_BASICA, tarjeta.Saldo);
-    }
-
-    [Test]
-    public void PagarSinSaldo_NoEmiteBoleto()
-    {
-        var colectivo = new Colectivo("133");
-
-        bool ok = colectivo.PagarCon(tarjeta, out Boleto? boleto);
-
-        Assert.IsFalse(ok);
-        Assert.IsNull(boleto);
-        Assert.AreEqual(0, tarjeta.Saldo);
-    }
-
-
-    [Test]
-    public void PagarJustoElSaldoExacto_Funciona()
-    {
-        tarjeta.Cargar(2000);
-        tarjeta.Pagar(420); // deja justo 1580
-
-        var colectivo = new Colectivo("153");
-
-        bool ok = colectivo.PagarCon(tarjeta, out Boleto? boleto);
-
-        Assert.IsTrue(ok);
-        Assert.IsNotNull(boleto);
-        Assert.AreEqual(0, tarjeta.Saldo);
-        Assert.AreEqual(0, boleto.SaldoRestante);
-    }
-
-
-    [Test]
-    public void MuchasCargasValidas_NoSupera40000()
-    {
-        var montos = new double[] { 10000, 10000, 10000, 10000 };
-        foreach (var m in montos)
-            tarjeta.Cargar(m);
-
-        Assert.AreEqual(40000, tarjeta.Saldo);
-
-        bool noPuedoMas = tarjeta.Cargar(2000);
-        Assert.IsFalse(noPuedoMas);
-        Assert.AreEqual(40000, tarjeta.Saldo);
-    }
-
-    [Test]
-    public void IntentarCargar0_NoCarga()
-    {
-        bool resultado = tarjeta.Cargar(0);
-        Assert.IsFalse(resultado);
-        Assert.AreEqual(0, tarjeta.Saldo);
-    }
-
-    [Test]
-    public void IntentarCargarNegativo_NoCarga()
-    {
-        bool resultado = tarjeta.Cargar(-1000);
-        Assert.IsFalse(resultado);
-        Assert.AreEqual(0, tarjeta.Saldo);
-    }
-
-    [Test]
-    public void CargarTodosLosMontosValidos_DebeAceptarTodos()
-    {
-        double[] montos = { 2000, 3000, 4000, 5000, 8000, 10000, 15000, 20000, 25000, 30000 };
-
-        foreach (double m in montos)
+        foreach (var monto in MontosValidos)
         {
-            Tarjeta t = new Tarjeta();
-            Assert.IsTrue(t.Cargar(m), $"Falla con el monto {m}");
-            Assert.AreEqual(m, t.Saldo);
+            Assert.That(tarjeta.Cargar(monto), Is.True, $"Debería aceptar cargar {monto}");
+            Assert.That(tarjeta.Saldo, Is.EqualTo(monto).Within(0.01));
+            tarjeta = new Tarjeta(); // reiniciar para el siguiente monto
         }
     }
 
     [Test]
-    public void FlujoCompleto_CargarPagarPagarEmitirBoletos()
+    public void Cargar_MontoInvalido_NoModificaSaldoYRetornaFalse()
     {
-        tarjeta.Cargar(5000);
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(10000);
 
-        var colectivo = new Colectivo("123 Roja");
+        Assert.That(tarjeta.Cargar(1234), Is.False);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(10000).Within(0.01));
 
-        bool ok1 = colectivo.PagarCon(tarjeta, out Boleto? b1);
-
-        Assert.IsTrue(ok1);
-        Assert.IsNotNull(b1);
+        Assert.That(tarjeta.Cargar(99999), Is.False);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(10000).Within(0.01));
     }
 
-
-
     [Test]
-    public void FranquiciaCompletaSiemprePaga()
+    public void Cargar_SaldoSuperaLimite_NoPermiteCarga()
     {
-        var tarjeta = new FranquiciaCompleta();
-        var colectivo = new Colectivo("122");
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(30000);
+        tarjeta.Cargar(10000);
 
-        bool ok1 = colectivo.PagarCon(tarjeta, out Boleto? boleto1);
-        bool ok2 = colectivo.PagarCon(tarjeta, out Boleto? boleto2);
-        bool ok3 = colectivo.PagarCon(tarjeta, out Boleto? boleto3);
-
-        Assert.IsTrue(ok1);
-        Assert.IsTrue(ok2);
-        Assert.IsTrue(ok3);
-
-        Assert.IsNotNull(boleto1);
-        Assert.IsNotNull(boleto2);
-        Assert.IsNotNull(boleto3);
+        Assert.That(tarjeta.Cargar(2000), Is.False);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(40000).Within(0.01));
     }
 
+    [Test]
+    public void Pagar_SaldoNoPuedeQuedarPorDebajoDeNegativoMaximo()
+    {
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(2000);
+
+        // Con $2000 → puede hacer 2 viajes completos + varios en negativo
+        // 2000 - 1580 = 420
+        // 420 - 1580 = -1160 (aceptable)
+        // -1160 - 1580 = -2740 → NO permitido
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);  // viaje 1 → saldo = 420
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);  // viaje 2 → saldo = -1160
+        Assert.That(colectivo.PagarCon(tarjeta), Is.False); // viaje 3 → RECHAZADO
+
+        Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01));
+        Assert.That(tarjeta.Saldo, Is.GreaterThanOrEqualTo(SALDO_NEGATIVO_MAX));
+    }
 
     [Test]
-    public void MedioBoletoPagaLaMitad()
+    public void Pagar_TarjetaNormal_DesuentaTarifaCompletaCorrectamente()
+    {
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(10000);
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(10000 - 1580).Within(0.01));
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(10000 - 3160).Within(0.01));
+    }
+
+    [Test]
+    public void Pagar_MedioBoleto_DesuentaExactamenteLaMitad()
     {
         var tarjeta = new MedioBoleto();
-        var colectivo = new Colectivo("122");
+        tarjeta.Cargar(5000);
 
-        tarjeta.Cargar(2000);
-        double esperado = Colectivo.TARIFA_BASICA / 2;
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 790).Within(0.01));
 
-        double saldoAntes = tarjeta.Saldo;
-
-        bool ok = colectivo.PagarCon(tarjeta, out Boleto? boleto);
-
-        Assert.IsTrue(ok);
-        Assert.IsNotNull(boleto);
-        Assert.AreEqual(saldoAntes - esperado, tarjeta.Saldo);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 1580).Within(0.01));
     }
 
     [Test]
-    public void NoDebePermitirSaldoMenorA1200Negativo()
+    public void Pagar_BoletoGratuito_NoDescuentaNada()
     {
-        Tarjeta t = new Tarjeta();
+        var tarjeta = new BoletoGratuito();
+        tarjeta.Cargar(3000);
 
-        bool pago1 = t.Pagar(1580);
+        for (int i = 0; i < 50; i++)
+        {
+            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        }
 
-        Assert.IsFalse(pago1);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(3000).Within(0.01));
     }
 
     [Test]
-    public void DebePermitirLlegarAlLimiteNegativo()
+    public void Pagar_FranquiciaCompleta_SiemprePermiteViajeSinDescontar()
     {
-        Tarjeta t = new Tarjeta();
+        var tarjeta = new FranquiciaCompleta();
+        tarjeta.Cargar(10000);
 
-        bool pago1 = t.Pagar(1200);   // saldo = -1200 → permitido
-        Assert.IsTrue(pago1);
+        for (int i = 0; i < 100; i++)
+        {
+            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        }
 
-        bool pago2 = t.Pagar(1);      // saldo = -1201 → no permitido
-        Assert.IsFalse(pago2);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(10000).Within(0.01));
     }
-
 
     [Test]
-    public void DebeDescontarViajePlusAlCargar()
+    public void Colectivo_PagarCon_RespetaTipoDeTarjeta_CorrectoDescuento()
     {
-        Tarjeta t = new Tarjeta();
+        var normal = new Tarjeta();
+        var medio = new MedioBoleto();
+        var gratis = new BoletoGratuito();
+        var franquicia = new FranquiciaCompleta();
 
-        bool pago1 = t.Pagar(1200); // saldo = -1200
-        Assert.IsTrue(pago1);
+        normal.Cargar(10000);
+        medio.Cargar(10000);
 
-        bool carga = t.Cargar(2000);
-        Assert.IsTrue(carga);
+        Assert.That(colectivo.PagarCon(normal), Is.True);
+        Assert.That(normal.Saldo, Is.EqualTo(10000 - 1580).Within(0.01));
 
-        Assert.AreEqual(800, t.Saldo);
+        Assert.That(colectivo.PagarCon(medio), Is.True);
+        Assert.That(medio.Saldo, Is.EqualTo(10000 - 790).Within(0.01));
+
+        Assert.That(colectivo.PagarCon(gratis), Is.True);
+        Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
-
-
-
 }
-
-

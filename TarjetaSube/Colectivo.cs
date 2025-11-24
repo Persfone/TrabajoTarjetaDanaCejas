@@ -2,7 +2,8 @@
 
 namespace TarjetaSube
 {
-     public class Colectivo
+    // Clase Colectivo - limpia y simple
+    public class Colectivo
     {
         public const double TARIFA_BASICA = 1580;
         private string linea;
@@ -12,18 +13,11 @@ namespace TarjetaSube
             this.linea = linea;
         }
 
-        public bool PagarCon(Tarjeta tarjeta, out Boleto? boleto) //out es una forma en la q una funcion puede devolver mas de un valor
+        // Este es el único método que se debe usar desde afuera
+        public bool PagarCon(Tarjeta tarjeta)
         {
-            if (tarjeta.Pagar(Colectivo.TARIFA_BASICA))
-            {
-                boleto = new Boleto(linea, tarjeta.Saldo);
-                return true;
-            }
-
-            boleto = null;
-            return false;
+            return tarjeta.Pagar(TARIFA_BASICA);
         }
-
 
         public string ObtenerLinea() => linea;
     }
