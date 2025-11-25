@@ -178,6 +178,79 @@ namespace TarjetaSube
         public override string ObtenerTipo() => "Franquicia Completa";
     }
 
+    public class UsoFrecuente : Tarjeta
+    {
+        private readonly IClock _clock;
+        private int _viajesMes = 0;
+        private int _mesRegistrado = 0;
+        private int _añoRegistrado = 0;
+
+        public override string ObtenerTipo() => "Tarjeta Uso Frecuente";
+
+        public UsoFrecuente(IClock? clock = null) : base()
+        {
+            _clock = clock ?? new SystemClock();
+            // Inicializar con el mes y año actual
+            DateTime ahora = _clock.Now;
+            _mesRegistrado = ahora.Month;
+            _añoRegistrado = ahora.Year;
+            Console.WriteLine($"DEBUG: UsoFrecuente creado - Mes: {_mesRegistrado}, Año: {_añoRegistrado}");
+        }
+
+        public override double ObtenerMontoAPagar(double tarifa)
+        {
+            // Calcular el próximo viaje (viajesMes + 1)
+            int proximoViaje = _viajesMes + 1;
+            Console.WriteLine($"DEBUG: ObtenerMontoAPagar - ViajesMes: {_viajesMes}, PróximoViaje: {proximoViaje}");
+
+            // Viajes 1-29: tarifa completa (sin descuento)
+            if (proximoViaje >= 1 && proximoViaje <= 29)
+                return tarifa; // 1580
+
+            // Viajes 30-59: 20% descuento
+            else if (proximoViaje >= 30 && proximoViaje <= 59)
+                return tarifa * 0.8; // 1264
+
+            // Viajes 60-80: 25% descuento
+            else if (proximoViaje >= 60 && proximoViaje <= 80)
+                return tarifa * 0.75; // 1185
+
+            // Viaje 81 en adelante: vuelve a tarifa completa
+            else
+                return tarifa; // 1580
+        }
+
+        public override bool Pagar(double monto)
+        {
+            DateTime ahora = _clock.Now;
+            Console.WriteLine($"DEBUG: Pagar - Fecha actual: {ahora}, Mes registrado: {_mesRegistrado}, Año registrado: {_añoRegistrado}, ViajesMes: {_viajesMes}");
+
+            // VERIFICAR SI CAMBIÓ EL MES/AÑO
+            if (ahora.Month != _mesRegistrado || ahora.Year != _añoRegistrado)
+            {
+                Console.WriteLine($"DEBUG: ¡CAMBIO DE MES/AÑO DETECTADO! Reiniciando contador.");
+                _viajesMes = 0;
+                _mesRegistrado = ahora.Month;
+                _añoRegistrado = ahora.Year;
+            }
+
+            // Calcular el monto a pagar según el próximo viaje
+            double montoADescontar = ObtenerMontoAPagar(monto);
+            Console.WriteLine($"DEBUG: Monto a descontar: {montoADescontar}");
+
+            // Intentar pagar
+            bool pagado = base.Pagar(montoADescontar);
+
+            // Solo incrementar si el pago fue exitoso
+            if (pagado)
+            {
+                _viajesMes++;
+                Console.WriteLine($"DEBUG: Viaje exitoso. Nuevo ViajesMes: {_viajesMes}");
+            }
+
+            return pagado;
+        }
+    }
 
     public interface IClock
     {

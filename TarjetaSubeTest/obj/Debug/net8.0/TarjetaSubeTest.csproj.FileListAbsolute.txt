@@ -1,11 +1,5 @@
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\.msCoverageSourceRootsMapping_TarjetaSubeTest
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\CoverletSourceRootsMapping_TarjetaSubeTest
-C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.csproj.AssemblyReference.cache
-C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.AssemblyInfoInputs.cache
-C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.AssemblyInfo.cs
-C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.csproj.CoreCompileInputs.cache
-C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.sourcelink.json
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\testhost.dll
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\TarjetaSube.deps.json
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\TarjetaSube.runtimeconfig.json
@@ -98,6 +92,12 @@ C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\zh-Hant\
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\zh-Hant\Microsoft.VisualStudio.TestPlatform.Common.resources.dll
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\TarjetaSube.dll
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\bin\Debug\net8.0\TarjetaSube.pdb
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.csproj.AssemblyReference.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.AssemblyInfoInputs.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.AssemblyInfo.cs
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.csproj.CoreCompileInputs.cache
+C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.sourcelink.json
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaS.C577E759.Up2Date
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\TarjetaSubeTest.dll
 C:\Users\dana\source\repos\TTDanaCejas\TarjetaSubeTest\obj\Debug\net8.0\refint\TarjetaSubeTest.dll
