@@ -28,10 +28,15 @@ namespace TarjetaSube
         public bool Cargar(double monto)
         {
             if (!montosValidos.Contains(monto)) return false;
+
+            // PRIMERO: Acreditar lo pendiente que quepa (¡importantísimo!)
+            AcreditarCarga();
+
+            // SEGUNDO: Intentar cargar el nuevo monto
             if (saldo + monto > LIMITE_SALDO)
             {
-                // Calculamos cuánto se puede acreditar y cuánto queda pendiente
-                double montoAcreditable = LIMITE_SALDO - saldo;
+                double espacioDisponible = LIMITE_SALDO - saldo;
+                double montoAcreditable = Math.Min(monto, espacioDisponible);
                 double montoPendiente = monto - montoAcreditable;
 
                 saldo += montoAcreditable;
@@ -39,9 +44,12 @@ namespace TarjetaSube
             }
             else
             {
-                // Carga normal si no supera el límite
                 saldo += monto;
             }
+
+            // Opcional: acreditar de nuevo por si quedó espacio (no necesario, pero seguro)
+            AcreditarCarga();
+
             return true;
         }
 
@@ -65,12 +73,27 @@ namespace TarjetaSube
 
         public virtual bool Pagar(double monto)
         {
+            // Acreditar primero para usar el saldo disponible al máximo
+            AcreditarCarga(); 
             if (saldo - monto < SALDO_NEGATIVO_MAX) return false;
             saldo -= monto;
-
             AcreditarCarga();
             return true;
         }
+
+        protected static bool EsHoraValidaParaFranquicia(DateTime ahora)
+        {
+            // Solo aplica de Lunes (1) a Viernes (5)
+            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
+            {
+                return false;
+            }
+
+            // Solo aplica de 6:00 a 22:00
+            int hora = ahora.Hour;
+            return hora >= 6 && hora < 22;
+        }
+
     }
 
 
@@ -99,73 +122,88 @@ namespace TarjetaSube
                 _viajesHoy = 0;
             }
 
-            // Verificar intervalo de 5 minutos
+            // 1. Determinar si APLICA la FRANQUICIA de Medio Boleto
+            bool aplicaFranquicia =
+                _viajesHoy < 2 &&
+                EsHoraValidaParaFranquicia(ahora);
+
+            double montoADescontar = aplicaFranquicia ? monto / 2.0 : monto;
+
+            // 2. Verificar intervalo de 5 minutos (Aplica para CUALQUIER viaje)
             if (_ultimoViajeFecha.HasValue)
             {
                 TimeSpan diferencia = ahora - _ultimoViajeFecha.Value;
                 if (diferencia < TimeSpan.FromMinutes(5))
                 {
-                    return false; // ¡No puede viajar tan rápido!
+                    return false; // No puede viajar tan rápido.
                 }
             }
 
-            // 1. Determinar el monto real a debitar (790 o 1580)
-            // Usamos 'monto' porque 'monto' aquí es 1580 (TARIFA_BASICA)
-            double montoADescontar = _viajesHoy < 2 ? monto / 2.0 : monto;
-
-            // 2. Intentar pagar el monto ya ajustado. 
+            // 3. Intentar pagar (tarifa completa o media)
             bool resultado = base.Pagar(montoADescontar);
 
-            if (resultado)
+            // 4. Actualizar el contador y la fecha SOLO si el pago fue exitoso Y fue con franquicia
+            if (resultado && aplicaFranquicia)
             {
                 _viajesHoy++;
+                _ultimoViajeFecha = ahora;
+            }
+            else if (resultado && !aplicaFranquicia)
+            {
+                // Si pagó tarifa completa, solo actualiza la fecha (no incrementa viajes de franquicia)
                 _ultimoViajeFecha = ahora;
             }
 
             return resultado;
         }
+
     }
 
     public class BoletoGratuito : Tarjeta
     {
         private readonly IClock _clock;
         private DateTime? _ultimoViajeFecha = null;
-        private int _viajesHoy = 0;
-
-        // La tarifa a obtener ES 0, pero la lógica de cobro está en Pagar()
-        public override double ObtenerMontoAPagar(double tarifa) => 0;
-        public override string ObtenerTipo() => "Boleto Gratuito";
+        private int _viajesGratisHoy = 0;
 
         public BoletoGratuito(IClock? clock = null)
         {
             _clock = clock ?? new SystemClock();
         }
 
-        public override bool Pagar(double monto) // monto SIEMPRE es TARIFA_BASICA (1580)
+        public override double ObtenerMontoAPagar(double tarifa) => tarifa; // ← Siempre devuelve tarifa completa
+
+        public override string ObtenerTipo() => "Boleto Gratuito";
+
+        public override bool Pagar(double monto) // monto = 1580
         {
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
 
-            // 1. Reiniciar contador si es un nuevo día
-            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
+            // REINICIAR CONTADOR AL CAMBIAR DE DÍA
+            if (_ultimoViajeFecha == null || _ultimoViajeFecha.Value.Date < hoy)
             {
-                _viajesHoy = 0;
+                _viajesGratisHoy = 0;
             }
 
-            bool resultado;
-            double montoAPagar = (_viajesHoy < 2) ? 0 : monto;
+            // ¿Aplica franquicia?
+            bool enFranjaHoraria = EsHoraValidaParaFranquicia(ahora);
+            bool tieneViajesGratis = _viajesGratisHoy < 2;
 
-            // 2. Intentar pagar (0 o 1580)
-            resultado = base.Pagar(montoAPagar);
+            double montoAPagar = (enFranjaHoraria && tieneViajesGratis) ? 0 : monto;
 
-            // 3. Actualizar el contador y la fecha SOLO si el pago fue exitoso
-            if (resultado)
+            // Intentar pagar
+            bool pagado = base.Pagar(montoAPagar);
+            if (!pagado) return false;
+
+            // Actualizar estado SOLO si se pagó
+            _ultimoViajeFecha = ahora;
+
+            if (enFranjaHoraria && tieneViajesGratis)
             {
-                _viajesHoy++;
-                _ultimoViajeFecha = ahora;
+                _viajesGratisHoy++; // solo cuenta si fue gratis
             }
 
-            return resultado;
+            return true;
         }
     }
 
