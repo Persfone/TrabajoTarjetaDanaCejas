@@ -178,6 +178,66 @@ namespace TarjetaSube
         public override string ObtenerTipo() => "Franquicia Completa";
     }
 
+    //---------------------------INTERURBANA---------------------------------//
+
+    public class TarjetaInterurbana : Tarjeta
+    {
+        private const double TARIFA_INTERURBANA = 3000;
+
+        // Sobreescribe ObtenerMontoAPagar para devolver la tarifa interurbana.
+        // Aunque no es estrictamente necesario, mantiene el polimorfismo.
+        public override double ObtenerMontoAPagar(double tarifa) => TARIFA_INTERURBANA;
+
+        public override string ObtenerTipo() => "Tarjeta Normal (Interurbana)";
+    }
+
+
+    public class MedioBoletoInterurbano : MedioBoleto
+    {
+        private const double TARIFA_INTERURBANA = 3000;
+
+        // Llama al constructor base de MedioBoleto para inicializar el reloj.
+        public MedioBoletoInterurbano(IClock? clock = null) : base(clock) { }
+
+        // El monto a pagar es la mitad de la tarifa interurbana ($1500), independientemente de la tarifa que se pase.
+        public override double ObtenerMontoAPagar(double tarifa) => TARIFA_INTERURBANA / 2.0;
+
+        public override string ObtenerTipo() => "Medio Boleto (Interurbana)";
+
+        // Sobreescribimos Pagar para asegurar que la lógica base (MedioBoleto.Pagar) use 
+        // TARIFA_INTERURBANA ($3000) como la tarifa base al aplicar el descuento.
+        public override bool Pagar(double monto)
+        {
+            // Se llama a Pagar de la clase base, pero forzando el monto de $3000.
+            return base.Pagar(TARIFA_INTERURBANA);
+        }
+    }
+
+    public class BoletoGratuitoInterurbano : BoletoGratuito
+    {
+        private const double TARIFA_INTERURBANA = 3000;
+
+        // Llama al constructor base de BoletoGratuito para inicializar el reloj.
+        public BoletoGratuitoInterurbano(IClock? clock = null) : base(clock) { }
+
+        public override string ObtenerTipo() => "Boleto Gratuito (Interurbana)";
+
+        // Sobreescribimos Pagar para asegurar que la lógica base (BoletoGratuito.Pagar) use 
+        // TARIFA_INTERURBANA ($3000) como la tarifa base para el tercer viaje (cobro completo).
+        public override bool Pagar(double monto)
+        {
+            // Se llama a Pagar de la clase base, pero forzando el monto de $3000.
+            return base.Pagar(TARIFA_INTERURBANA);
+        }
+    }
+
+    public class FranquiciaCompletaInterurbana : FranquiciaCompleta
+    {
+        public override string ObtenerTipo() => "Franquicia Completa (Interurbana)";
+
+        // Pagar siempre devuelve true y no cobra nada (como la clase base).
+        // No necesita sobrescribir Pagar ni ObtenerMontoAPagar.
+    }
 
     public interface IClock
     {
