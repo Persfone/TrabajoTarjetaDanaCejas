@@ -7,7 +7,6 @@ using TarjetaSube;
 public class TarjetaTests
 {
     private static readonly double[] MontosValidos = { 2000, 3000, 4000, 5000, 8000, 10000, 15000, 20000, 25000, 30000 };
-    private const double LIMITE_SALDO = 40000;
     private const double SALDO_NEGATIVO_MAX = -1200;
     private const double TARIFA_BASICA = 1580;
     private const double TARIFA_NORMAL = 1580.0;     // Viajes 1-29 y 81+
@@ -26,16 +25,26 @@ public class TarjetaTests
         clock = new FakeClock { Now = new DateTime(2024, 1, 1, 10, 0, 0) };
     }
 
+    private class FakeClock : IClock
+    {
+        public DateTime Now { get; set; }
+        public FakeClock() { }
+        public FakeClock(DateTime initialTime) => Now = initialTime;
+        public void AdvanceMinutes(int minutes) => Now = Now.AddMinutes(minutes);
+        public void AdvanceDays(int days) => Now = Now.AddDays(days);
+        public void AdvanceMonths(int months) => Now = Now.AddMonths(months);
+    }
+
+    // ==================== TESTS BÁSICOS DE CARGA Y PAGO ====================
     [Test]
     public void Cargar_TodosLosMontosValidos_AceptaYActualizaSaldoCorrectamente()
     {
         var tarjeta = new Tarjeta();
-
         foreach (var monto in MontosValidos)
         {
             Assert.That(tarjeta.Cargar(monto), Is.True, $"Debería aceptar cargar {monto}");
             Assert.That(tarjeta.Saldo, Is.EqualTo(monto).Within(0.01));
-            tarjeta = new Tarjeta(); // reiniciar para el siguiente monto
+            tarjeta = new Tarjeta();
         }
     }
 
@@ -139,52 +148,53 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
 
+    // ==================== TESTS DE FRANQUICIAS URBANAS ====================
     [Test]
     public void MedioBoleto_RestriccionDe5Minutos()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 5, 1, 9, 0, 0) };
+        var clock = new FakeClock(new DateTime(2025, 5, 1, 9, 0, 0));
         var tarjeta = new MedioBoleto(clock);
-        var colectivo = new Colectivo("144", clock);
+        var colectivoLocal = new Colectivo("144", clock);
 
         tarjeta.Cargar(2000);
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01));
 
-        clock.Now = clock.Now.AddMinutes(4);
-        Assert.That(colectivo.PagarCon(tarjeta), Is.False);
+        clock.AdvanceMinutes(4);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False);
         Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01));
 
-        clock.Now = clock.Now.AddMinutes(1); // Total 5 minutos
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(1);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(420).Within(0.01));
     }
 
     [Test]
     public void MedioBoleto_MaximoDosViajesConDescuentoPorDia_TercerViajeCobraCompleto()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 6, 10, 8, 0, 0) };
+        var clock = new FakeClock(new DateTime(2025, 6, 10, 8, 0, 0));
         var tarjeta = new MedioBoleto(clock);
-        var colectivo = new Colectivo("60", clock);
+        var colectivoLocal = new Colectivo("60", clock);
         tarjeta.Cargar(5000);
         double saldoEsperado = 5000;
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 790;
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
 
-        clock.Now = clock.Now.AddMinutes(6);
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(6);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 790;
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
 
-        clock.Now = clock.Now.AddMinutes(6);
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(6);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 1580;
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
 
-        clock.Now = clock.Now.AddMinutes(6);
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(6);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 1580;
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
     }
@@ -192,24 +202,17 @@ public class TarjetaTests
     [Test]
     public void BoletoGratuito_NoMasDeDosGratisPorDia_ConClockControlado()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 4, 5, 7, 0, 0) };
+        var clock = new FakeClock(new DateTime(2025, 4, 5, 7, 0, 0));
         var tarjeta = new BoletoGratuito(clock);
         tarjeta.Cargar(2000);
         var colectivoControlado = new Colectivo("102", clock);
 
-        // 2. Primer viaje (Gratis)
         colectivoControlado.PagarCon(tarjeta); // Saldo 2000. ViajesHoy 1.
-
-        // 3. Segundo viaje (Gratis)
-        clock.Now = clock.Now.AddMinutes(10); // 7:10 AM
+        clock.AdvanceMinutes(10);
         colectivoControlado.PagarCon(tarjeta); // Saldo 2000. ViajesHoy 2.
-
-        // 4. Tercer viaje (Debería ser Pago Completo: 1580)
-        clock.Now = clock.Now.AddMinutes(10); // 7:20 AM
+        clock.AdvanceMinutes(10);
         colectivoControlado.PagarCon(tarjeta); // Saldo 2000 - 1580 = 420. ViajesHoy 2.
-
-        // 5. Cuarto viaje (Pago Completo con saldo plus: 420 - 1580 = -1160)
-        clock.Now = clock.Now.AddMinutes(10); // 7:30 AM
+        clock.AdvanceMinutes(10);
         colectivoControlado.PagarCon(tarjeta); // Saldo 420 - 1580 = -1160. ViajesHoy 2.
 
         Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01));
@@ -218,36 +221,36 @@ public class TarjetaTests
     [Test]
     public void BoletoGratuito_SeReiniciaAlDiaSiguiente_ConClock()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 11, 24, 10, 0, 0) }; // Lunes
-        var colectivo = new Colectivo("102", clock);
+        var clock = new FakeClock(new DateTime(2025, 11, 24, 10, 0, 0)); // Lunes
+        var colectivoLocal = new Colectivo("102", clock);
         var tarjeta = new BoletoGratuito(clock);
         tarjeta.Cargar(10000);
 
         // Día 1: 2 gratis + 1 pago
-        colectivo.PagarCon(tarjeta); // gratis
-        colectivo.PagarCon(tarjeta); // gratis
-        colectivo.PagarCon(tarjeta); // paga → saldo = 10000 - 1580 = 8420
+        colectivoLocal.PagarCon(tarjeta); // gratis
+        colectivoLocal.PagarCon(tarjeta); // gratis
+        colectivoLocal.PagarCon(tarjeta); // paga → saldo = 10000 - 1580 = 8420
 
         // Cambiar al día siguiente
         clock.Now = new DateTime(2025, 11, 25, 10, 0, 0); // Martes
 
         // Día 2: vuelve a tener 2 viajes gratis
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(8420)); // no bajó
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(8420)); // sigue igual
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(8420 - 1580).Within(0.01)); // ahora sí paga
     }
 
-    //----------------------------------------FRANQUICIAS-----------------------------------//
+    // ==================== TESTS DE HORARIO DE FRANQUICIAS ====================
     [Test]
     public void Franquicias_FueraDeHorario_NoAplicanBeneficio()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 11, 24, 23, 30, 0) }; // Lunes 23:30
-        var colectivo = new Colectivo("144", clock);
+        var clock = new FakeClock(new DateTime(2025, 11, 24, 23, 30, 0)); // Lunes 23:30
+        var colectivoLocal = new Colectivo("144", clock);
 
         var medio = new MedioBoleto(clock);
         var gratuito = new BoletoGratuito(clock);
@@ -255,18 +258,18 @@ public class TarjetaTests
         medio.Cargar(10000);
         gratuito.Cargar(10000);
 
-        Assert.That(colectivo.PagarCon(medio), Is.True);
+        Assert.That(colectivoLocal.PagarCon(medio), Is.True);
         Assert.That(medio.Saldo, Is.EqualTo(10000 - 1580).Within(0.01)); // pagó completo!
 
-        Assert.That(colectivo.PagarCon(gratuito), Is.True);
+        Assert.That(colectivoLocal.PagarCon(gratuito), Is.True);
         Assert.That(gratuito.Saldo, Is.EqualTo(10000 - 1580).Within(0.01)); // pagó completo!
     }
 
     [Test]
     public void Franquicias_EnHorario_SiAplicanBeneficio()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 11, 24, 14, 0, 0) }; // Lunes 14hs
-        var colectivo = new Colectivo("60", clock);
+        var clock = new FakeClock(new DateTime(2025, 11, 24, 14, 0, 0)); // Lunes 14hs
+        var colectivoLocal = new Colectivo("60", clock);
 
         var medio = new MedioBoleto(clock);
         var gratuito = new BoletoGratuito(clock);
@@ -274,14 +277,14 @@ public class TarjetaTests
         medio.Cargar(10000);
         gratuito.Cargar(10000);
 
-        Assert.That(colectivo.PagarCon(medio), Is.True);
+        Assert.That(colectivoLocal.PagarCon(medio), Is.True);
         Assert.That(medio.Saldo, Is.EqualTo(10000 - 790).Within(0.01)); // 50%
 
-        Assert.That(colectivo.PagarCon(gratuito), Is.True);
+        Assert.That(colectivoLocal.PagarCon(gratuito), Is.True);
         Assert.That(gratuito.Saldo, Is.EqualTo(10000)); // gratis
     }
 
-    //----------------------------INTERURBANO---------------------------------//
+    // ==================== TESTS DE FRANQUICIAS INTERURBANAS ====================
     [Test]
     public void BoletoGratuitoInterurbano_SeReiniciaAlDiaSiguiente()
     {
@@ -472,13 +475,13 @@ public class TarjetaTests
         Assert.AreEqual(3000, colectivoInterurbano.UltimoBoleto.MontoDescontado);
     }
 
-    //----------------------------USO FRECUENTE---------------------------------//
+    // ==================== TESTS DE USO FRECUENTE ====================
     [Test]
     public void ObtenerMontoAPagar_AplicaDescuentosCorrectamenteSegunRangoDeViajes()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 11, 15, 10, 0, 0) };
+        var clock = new FakeClock(new DateTime(2025, 11, 15, 10, 0, 0));
         var tarjeta = new UsoFrecuente(clock);
-        var colectivo = new Colectivo("144", clock);
+        var colectivoLocal = new Colectivo("144", clock);
 
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
@@ -487,85 +490,155 @@ public class TarjetaTests
 
         for (int i = 1; i <= 29; i++)
         {
-            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-            clock.Now = clock.Now.AddMinutes(10);
+            Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+            clock.AdvanceMinutes(10);
         }
 
         for (int i = 30; i <= 59; i++)
         {
-            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-            Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1264).Within(0.01));
-            clock.Now = clock.Now.AddMinutes(10);
+            Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+            Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1264).Within(0.01));
+            clock.AdvanceMinutes(10);
         }
 
         for (int i = 60; i <= 80; i++)
         {
-            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-            Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1185).Within(0.01));
-            clock.Now = clock.Now.AddMinutes(10);
+            Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+            Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1185).Within(0.01));
+            clock.AdvanceMinutes(10);
         }
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
     }
 
     [Test]
     public void ContadorDeViajes_SeReiniciaCorrectamenteAlCambiarDeMes()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 11, 30, 23, 50, 0) };
+        var clock = new FakeClock(new DateTime(2025, 11, 30, 23, 50, 0));
         var tarjeta = new UsoFrecuente(clock);
-        var colectivo = new Colectivo("144", clock);
+        var colectivoLocal = new Colectivo("144", clock);
 
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(10000);
 
-        // Hacer algunos viajes en noviembre (no necesariamente 35)
+        // Hacer algunos viajes en noviembre
         for (int i = 0; i < 10; i++)
         {
-            colectivo.PagarCon(tarjeta);
-            clock.Now = clock.Now.AddMinutes(10);
+            colectivoLocal.PagarCon(tarjeta);
+            clock.AdvanceMinutes(10);
         }
 
         // Cambiar a diciembre
         clock.Now = new DateTime(2025, 12, 1, 0, 0, 0);
 
         // Primer viaje del nuevo mes → debería ser tarifa completa (1580)
-        colectivo.PagarCon(tarjeta);
-        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01),
+        colectivoLocal.PagarCon(tarjeta);
+        Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01),
             "El primer viaje del nuevo mes debería cobrar tarifa completa (1580)");
     }
 
     [Test]
     public void Pagar_ConSaldoInsuficiente_NoIncrementaContadorDeViajes()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 11, 20, 8, 0, 0) };
+        var clock = new FakeClock(new DateTime(2025, 11, 20, 8, 0, 0));
         var tarjeta = new UsoFrecuente(clock);
-        var colectivo = new Colectivo("144", clock);
+        var colectivoLocal = new Colectivo("144", clock);
 
         tarjeta.Cargar(2000);
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        clock.Now = clock.Now.AddMinutes(10);
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        clock.Now = clock.Now.AddMinutes(10);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(10);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(10);
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.False);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False);
         Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01));
 
         tarjeta.Cargar(10000);
-        clock.Now = clock.Now.AddMinutes(10);
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
+        clock.AdvanceMinutes(10);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
     }
 
-    public class FakeClock : IClock
+    // ==================== TESTS DE TRASBORDO ====================
+    [Test]
+    public void Trasbordo_Gratuito_CuandoCumpleCondiciones()
     {
-        public DateTime Now { get; set; } = DateTime.Now;
+        var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0));
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(10000);
 
-        public FakeClock() { }
-        public FakeClock(DateTime initialTime) { Now = initialTime; }
+        var colectivoA = new Colectivo("144 Roja", clock);
+        var colectivoB = new Colectivo("144 Negra", clock);
 
-        public void AdvanceMinutes(int minutes) => Now = Now.AddMinutes(minutes);
-        public void AdvanceDays(int days) => Now = Now.AddDays(days);
-        public void AdvanceMonths(int months) => Now = Now.AddMonths(months);
+        Assert.That(colectivoA.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoA.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580));
+        Assert.That(colectivoA.UltimoBoleto?.EsTrasbordo, Is.False);
+
+        clock.AdvanceMinutes(20);
+
+        Assert.That(colectivoB.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(0));
+        Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.True);
+    }
+
+    [Test]
+    public void Trasbordo_NoGratuito_SiMismaLinea()
+    {
+        var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0));
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(10000);
+        var colectivoLocal = new Colectivo("144 Roja", clock);
+
+        colectivoLocal.PagarCon(tarjeta);
+        clock.AdvanceMinutes(10);
+        colectivoLocal.PagarCon(tarjeta);
+
+        Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580));
+        Assert.That(colectivoLocal.UltimoBoleto?.EsTrasbordo, Is.False);
+    }
+
+    [Test]
+    public void Trasbordo_NoGratuito_FueraDeHorario()
+    {
+        var clock = new FakeClock(new DateTime(2025, 4, 5, 23, 0, 0)); // Domingo 23:00
+        var tarjeta = new Tarjeta();
+        tarjeta.Cargar(10000);
+
+        var colectivoA = new Colectivo("144 Roja", clock);
+        var colectivoB = new Colectivo("144 Negra", clock);
+
+        colectivoA.PagarCon(tarjeta);
+        clock.AdvanceMinutes(20);
+        colectivoB.PagarCon(tarjeta);
+
+        Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580));
+        Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.False);
+    }
+
+    [Test]
+    public void Colectivo_EmiteBoletoCorrectoParaCadaTipoDeTarjeta_YDevuelveTrue()
+    {
+        var clock = new FakeClock(new DateTime(2025, 6, 6, 18, 30, 0));
+        var colectivoLocal = new Colectivo("144", clock);
+
+        var normal = new Tarjeta(); normal.Cargar(10000);
+        var medio = new MedioBoleto(clock); medio.Cargar(10000);
+        var gratuito = new BoletoGratuito(clock); gratuito.Cargar(5000);
+        var franquicia = new FranquiciaCompleta();
+
+        Assert.That(colectivoLocal.PagarCon(normal), Is.True);
+        Assert.That(colectivoLocal.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Tarjeta Normal"));
+
+        Assert.That(colectivoLocal.PagarCon(gratuito), Is.True);
+        Assert.That(colectivoLocal.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Boleto Gratuito"));
+
+        Assert.That(colectivoLocal.PagarCon(franquicia), Is.True);
+        Assert.That(colectivoLocal.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Franquicia Completa"));
+
+        clock.AdvanceMinutes(6);
+        Assert.That(colectivoLocal.PagarCon(medio), Is.True);
+        Assert.That(colectivoLocal.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Medio Boleto"));
+        Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(790));
     }
 }

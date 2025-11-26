@@ -5,7 +5,7 @@ namespace TarjetaSube
     public class Colectivo
     {
         public const double TARIFA_BASICA = 1580;
-        public const double TARIFA_INTERURBANA = 3000; // NUEVO: agregar tarifa interurbana
+        public const double TARIFA_INTERURBANA = 3000;
 
         private readonly string linea;
         private readonly IClock clock;
@@ -30,10 +30,10 @@ namespace TarjetaSube
 
             double montoBase = tarjeta.ObtenerMontoAPagar(tarifaBase);
 
-            // LÓGICA DE TRASBORDO - COMENTADA TEMPORALMENTE
-            /*
+            // LÓGICA DE TRASBORDO
             bool esTrasbordo = false;
 
+            // Accedemos a los campos protegidos de trasbordo (están en Tarjeta base)
             var tipoTarjeta = tarjeta.GetType();
             var campoFecha = tipoTarjeta.GetField("ultimoViajeTrasbordo",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -56,10 +56,8 @@ namespace TarjetaSube
                     esTrasbordo = dentroDeHora && lineaDistinta && diaValido && horarioValido;
                 }
             }
-            */
 
-            // CORRECCIÓN: Usar montoBase directamente sin trasbordo por ahora
-            double montoFinal = montoBase; // esTrasbordo ? 0 : montoBase;
+            double montoFinal = esTrasbordo ? 0 : montoBase;
 
             bool pagado = tarjeta.Pagar(montoFinal);
             if (!pagado)
@@ -68,14 +66,12 @@ namespace TarjetaSube
                 return false;
             }
 
-            // Actualizar campos de trasbordo - COMENTADO TEMPORALMENTE
-            /*
+            // ACTUALIZAMOS SOLO los campos de trasbordo (NO TOCAMOS los de MedioBoleto ni Gratuito)
             if (campoFecha != null && campoLinea != null)
             {
                 campoFecha.SetValue(tarjeta, ahora);
                 campoLinea.SetValue(tarjeta, this.linea);
             }
-            */
 
             UltimoBoleto = new Boleto(
                 idTarjeta: tarjeta.Id,
@@ -84,7 +80,8 @@ namespace TarjetaSube
                 tipoTarjeta: tarjeta.ObtenerTipo(),
                 montoDescontado: montoFinal,
                 tarifaNormal: tarifaBase,
-                saldoRestante: tarjeta.Saldo
+                saldoRestante: tarjeta.Saldo,
+                esTrasbordo: esTrasbordo
             );
 
             return true;

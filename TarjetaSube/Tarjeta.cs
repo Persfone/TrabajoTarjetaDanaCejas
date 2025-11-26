@@ -25,6 +25,10 @@ namespace TarjetaSube
             this.Id = Guid.NewGuid();
         }
 
+        // CAMPOS PARA TRASBORDO
+        protected DateTime? ultimoViajeTrasbordo = null;
+        protected string? ultimaLineaTrasbordo = null;
+
         public bool Cargar(double monto)
         {
             if (!montosValidos.Contains(monto)) return false;
@@ -52,7 +56,6 @@ namespace TarjetaSube
 
             return true;
         }
-
 
         public void AcreditarCarga()
         {
@@ -94,8 +97,37 @@ namespace TarjetaSube
             return hora >= 6 && hora < 22;  // De 6:00 inclusive a 22:00 exclusive
         }
 
-    }
+        // MÉTODO PARA VERIFICAR TRASBORDO
+        protected bool EsTrasbordoValido(DateTime ahora, string lineaActual)
+        {
+            if (!ultimoViajeTrasbordo.HasValue || string.IsNullOrEmpty(ultimaLineaTrasbordo))
+                return false;
 
+            // Verificar que sea línea distinta
+            bool lineaDistinta = !string.Equals(ultimaLineaTrasbordo, lineaActual, StringComparison.OrdinalIgnoreCase);
+            if (!lineaDistinta)
+                return false;
+
+            // Verificar plazo de 1 hora
+            TimeSpan diferencia = ahora - ultimoViajeTrasbordo.Value;
+            bool dentroDeHora = diferencia <= TimeSpan.FromHours(1);
+            if (!dentroDeHora)
+                return false;
+
+            // Verificar días y horario: lunes a sábado de 7:00 a 22:00
+            bool diaValido = ahora.DayOfWeek >= DayOfWeek.Monday && ahora.DayOfWeek <= DayOfWeek.Saturday;
+            bool horarioValido = ahora.Hour >= 7 && ahora.Hour < 22;
+
+            return diaValido && horarioValido;
+        }
+
+        // MÉTODO PARA ACTUALIZAR TRASBORDO
+        protected void ActualizarTrasbordo(DateTime ahora, string lineaActual)
+        {
+            ultimoViajeTrasbordo = ahora;
+            ultimaLineaTrasbordo = lineaActual;
+        }
+    }
 
     public class MedioBoleto : Tarjeta
     {
@@ -156,7 +188,6 @@ namespace TarjetaSube
 
             return resultado;
         }
-
     }
 
     public class BoletoGratuito : Tarjeta
@@ -165,16 +196,15 @@ namespace TarjetaSube
         private DateTime? _ultimoViajeFecha = null;
         private int _viajesGratisHoy = 0;
 
-
         public BoletoGratuito(IClock? clock = null)
         {
             _clock = clock ?? new SystemClock();
         }
 
-
         public override double ObtenerMontoAPagar(double tarifa) => tarifa; // ← Siempre devuelve tarifa completa
 
         public override string ObtenerTipo() => "Boleto Gratuito";
+
         public override bool Pagar(double monto)
         {
             DateTime ahora = _clock.Now;
@@ -212,8 +242,6 @@ namespace TarjetaSube
     public class FranquiciaCompleta : Tarjeta
     {
         public override double ObtenerMontoAPagar(double tarifa) => 0;
-        // Pagar siempre es true porque su saldo negativo máximo es mucho más bajo.
-        // Asumo que el requisito era que siempre pueden viajar.
         public override bool Pagar(double monto) => true;
         public override string ObtenerTipo() => "Franquicia Completa";
     }
@@ -222,9 +250,7 @@ namespace TarjetaSube
 
     public class TarjetaInterurbana : Tarjeta
     {
-        // CORRECCIÓN: Devolver 3000 (tarifa normal interurbana)
         public override double ObtenerMontoAPagar(double tarifa) => 3000;
-
         public override string ObtenerTipo() => "Tarjeta Normal (Interurbana)";
     }
 
@@ -239,9 +265,7 @@ namespace TarjetaSube
             _clock = clock ?? new SystemClock();
         }
 
-        // CORRECCIÓN: Devolver 1500 (medio boleto interurbano)
         public override double ObtenerMontoAPagar(double tarifa) => 1500;
-
         public override string ObtenerTipo() => "Medio Boleto (Interurbana)";
 
         public override bool Pagar(double monto)
@@ -302,9 +326,7 @@ namespace TarjetaSube
             _clock = clock ?? new SystemClock();
         }
 
-        // CORRECCIÓN: Devolver 0 (gratuito)
         public override double ObtenerMontoAPagar(double tarifa) => 0;
-
         public override string ObtenerTipo() => "Boleto Gratuito (Interurbana)";
 
         public override bool Pagar(double monto)
