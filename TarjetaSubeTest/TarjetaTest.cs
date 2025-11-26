@@ -10,6 +10,9 @@ public class TarjetaTests
     private const double LIMITE_SALDO = 40000;
     private const double SALDO_NEGATIVO_MAX = -1200;
     private const double TARIFA_BASICA = 1580;
+    private const double TARIFA_NORMAL = 1580.0;     // Viajes 1-29 y 81+
+    private const double TARIFA_20_DTO = 1264.0;    // 1580 * 0.8 = 1264.0 (Viajes 30-59)
+    private const double TARIFA_25_DTO = 1185.0;
 
     private Colectivo colectivo;
     private Colectivo colectivoInterurbano;
@@ -67,32 +70,7 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(tarjeta), Is.False); // -1160 -1580 = -2740 → excede -1200
         Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01)); // no cambió
     }
-    /*
-    [Test]
-    public void Pagar_ConSaldoCero_NoPermiteViaje_PorqueCruzaNegativoMax()
-    {
-        var tarjeta = new Tarjeta();
-        var resultado = colectivo.PagarCon(tarjeta);
 
-        Assert.That(resultado, Is.False);
-        Assert.That(tarjeta.Saldo, Is.EqualTo(0)); // No se descuenta nada
-    }
-
-    
-    [Test]
-    public void Pagar_ConSaldoInsuficienteSuperandoNegativoMax_DevuelveFalseYNoDescuenta()
-    {
-        var tarjeta = new Tarjeta(); // Saldo 0
-        tarjeta.Pagar(TARIFA_BASICA); // Saldo -1580
-
-        // El saldo negativo máximo es -1200. Si saldo es -1580, y se intenta debitar 1580,
-        // el saldo final sería -3160. Se excede el límite.
-        bool pagado = colectivo.PagarCon(tarjeta);
-
-        Assert.That(pagado, Is.False);
-        Assert.That(tarjeta.Saldo, Is.EqualTo(-TARIFA_BASICA).Within(0.01)); // Saldo se mantiene en -1580
-    }
-    */
     [Test]
     public void Cargar_ConCreditoPendiente_AcreditaTodoPendienteYRestoASaldo()
     {
@@ -125,34 +103,7 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         Assert.That(tarjeta.Saldo, Is.EqualTo(10000 - 3160).Within(0.01));
     }
-    /*
-    [Test]
-    public void Pagar_MedioBoleto_DesuentaExactamenteLaMitad()
-    {
-        var tarjeta = new MedioBoleto();
-        tarjeta.Cargar(5000);
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 790).Within(0.01));
-
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        Assert.That(tarjeta.Saldo, Is.EqualTo(5000 - 1580).Within(0.01));
-    }
-  
-    [Test]
-    public void Pagar_BoletoGratuito_NoDescuentaNada()
-    {
-        var tarjeta = new BoletoGratuito();
-        tarjeta.Cargar(3000);
-
-        for (int i = 0; i < 50; i++)
-        {
-            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
-        }
-
-        Assert.That(tarjeta.Saldo, Is.EqualTo(3000).Within(0.01));
-    }
-   */
     [Test]
     public void Pagar_FranquiciaCompleta_SiemprePermiteViajeSinDescontar()
     {
@@ -188,33 +139,25 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
 
-
-    public void MedioBoleto_RestriccionDe5Minutoso()
+    [Test]
+    public void MedioBoleto_RestriccionDe5Minutos()
     {
         var clock = new FakeClock { Now = new DateTime(2025, 5, 1, 9, 0, 0) };
         var tarjeta = new MedioBoleto(clock);
-        var colectivo = new Colectivo("144");
+        var colectivo = new Colectivo("144", clock);
 
         tarjeta.Cargar(2000);
 
-        // --- VIAJE 1: Exitoso (Medio Boleto) ---
-        // Saldo: 2000 - 790 = 1210
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "El primer viaje debe ser aceptado.");
-        Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01)); // Saldo esperado 1210
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01));
 
-        // --- VIAJE 2: Rechazo por Tiempo (< 5 minutos) ---
         clock.Now = clock.Now.AddMinutes(4);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.False);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01));
 
-        Assert.That(colectivo.PagarCon(tarjeta), Is.False, "El pago debe ser rechazado si no pasaron 5 minutos.");
-        Assert.That(tarjeta.Saldo, Is.EqualTo(1210).Within(0.01), "El saldo NO debe cambiar tras el rechazo por tiempo.");
-
-        // --- VIAJE 3: Exitoso (Medio Boleto) después de 5 minutos ---
-        // Avanzamos el tiempo para que hayan pasado 5 minutos desde el Viaje 1.
-        clock.Now = new DateTime(2025, 5, 1, 9, 5, 0);
-
-        // AJUSTE: Saldo: 1210 - 790 = 420 (Viaje 2 con descuento del día)
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "El pago debe ser aceptado al pasar los 5 minutos.");
-        Assert.That(tarjeta.Saldo, Is.EqualTo(420).Within(0.01)); // Saldo esperado 420
+        clock.Now = clock.Now.AddMinutes(1); // Total 5 minutos
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(420).Within(0.01));
     }
 
     [Test]
@@ -222,48 +165,36 @@ public class TarjetaTests
     {
         var clock = new FakeClock { Now = new DateTime(2025, 6, 10, 8, 0, 0) };
         var tarjeta = new MedioBoleto(clock);
-        var colectivo = new Colectivo("60");
-
-        // Cargamos saldo suficiente (5000) para 2 MB + 2 viajes completos sin alcanzar el límite negativo.
+        var colectivo = new Colectivo("60", clock);
         tarjeta.Cargar(5000);
         double saldoEsperado = 5000;
 
-        // --- VIAJE 1: Aplica Descuento (790) ---
-        // Saldo: 5000 - 790 = 4210
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 1 debe aplicar medio boleto.");
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 790;
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
-        clock.Now = clock.Now.AddMinutes(6); // Esperamos > 5 min
 
-        // --- VIAJE 2: Aplica Descuento (790) ---
-        // Saldo: 4210 - 790 = 3420
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 2 debe aplicar medio boleto.");
+        clock.Now = clock.Now.AddMinutes(6);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 790;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 3420
-        clock.Now = clock.Now.AddMinutes(6);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
 
-        // --- VIAJE 3: COBRA TARIFA COMPLETA (1580) ---
-        // Se agota el límite diario de descuentos.
-        // Saldo: 3420 - 1580 = 1840
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 3 debe cobrar la tarifa completa (1580).");
-        saldoEsperado -= 1580;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 1840
-        Assert.That(tarjeta.Saldo, Is.Not.EqualTo(1840 - 790).Within(0.01), "Verifica que el saldo NO es el de un medio boleto.");
         clock.Now = clock.Now.AddMinutes(6);
-
-        // --- VIAJE 4: COBRA TARIFA COMPLETA (1580) ---
-        // Saldo: 1840 - 1580 = 260
-        Assert.That(colectivo.PagarCon(tarjeta), Is.True, "Viaje 4 debe seguir cobrando tarifa completa.");
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
         saldoEsperado -= 1580;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01)); // Saldo: 260
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
+
+        clock.Now = clock.Now.AddMinutes(6);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        saldoEsperado -= 1580;
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
     }
 
     [Test]
-        public void BoletoGratuito_NoMasDeDosGratisPorDia_ConClockControlado()
+    public void BoletoGratuito_NoMasDeDosGratisPorDia_ConClockControlado()
     {
-        var clock = new FakeClock { Now = new DateTime(2025, 4, 5, 10, 0, 0) };
+        var clock = new FakeClock { Now = new DateTime(2025, 4, 5, 7, 0, 0) };
         var tarjeta = new BoletoGratuito(clock);
-        tarjeta.Cargar(2000); // Saldo 2000
+        tarjeta.Cargar(2000);
         var colectivoControlado = new Colectivo("102", clock);
 
         // 2. Primer viaje (Gratis)
@@ -281,8 +212,6 @@ public class TarjetaTests
         clock.Now = clock.Now.AddMinutes(10); // 7:30 AM
         colectivoControlado.PagarCon(tarjeta); // Saldo 420 - 1580 = -1160. ViajesHoy 2.
 
-        // CORRECCIÓN: El test original esperaba 2000 (incorrecto). 
-        // El saldo final real con 4 viajes (2 gratis, 2 pagados) es -1160.
         Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01));
     }
 
@@ -313,7 +242,7 @@ public class TarjetaTests
         Assert.That(tarjeta.Saldo, Is.EqualTo(8420 - 1580).Within(0.01)); // ahora sí paga
     }
 
-//----------------------------------------FRANQUICIAS-----------------------------------//
+    //----------------------------------------FRANQUICIAS-----------------------------------//
     [Test]
     public void Franquicias_FueraDeHorario_NoAplicanBeneficio()
     {
@@ -351,7 +280,6 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(gratuito), Is.True);
         Assert.That(gratuito.Saldo, Is.EqualTo(10000)); // gratis
     }
-
 
     //----------------------------INTERURBANO---------------------------------//
     [Test]
@@ -462,8 +390,6 @@ public class TarjetaTests
         // Assert
         Assert.IsTrue(pagoExitoso);
         Assert.AreEqual(5000 - 3000, tarjeta.Saldo); // Verificar que se descontaron 3000
-                                                     // Comentar esta línea o cambiarla por una verificación del saldo
-                                                     // Assert.AreEqual(3000, colectivoInterurbano.UltimoBoleto.MontoDescontado);
     }
 
     [Test]
@@ -546,9 +472,100 @@ public class TarjetaTests
         Assert.AreEqual(3000, colectivoInterurbano.UltimoBoleto.MontoDescontado);
     }
 
+    //----------------------------USO FRECUENTE---------------------------------//
+    [Test]
+    public void ObtenerMontoAPagar_AplicaDescuentosCorrectamenteSegunRangoDeViajes()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 11, 15, 10, 0, 0) };
+        var tarjeta = new UsoFrecuente(clock);
+        var colectivo = new Colectivo("144", clock);
+
+        tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
+        tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
+        tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
+        tarjeta.Cargar(30000); // Saldo suficiente
+
+        for (int i = 1; i <= 29; i++)
+        {
+            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+            clock.Now = clock.Now.AddMinutes(10);
+        }
+
+        for (int i = 30; i <= 59; i++)
+        {
+            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+            Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1264).Within(0.01));
+            clock.Now = clock.Now.AddMinutes(10);
+        }
+
+        for (int i = 60; i <= 80; i++)
+        {
+            Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+            Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1185).Within(0.01));
+            clock.Now = clock.Now.AddMinutes(10);
+        }
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
+    }
+
+    [Test]
+    public void ContadorDeViajes_SeReiniciaCorrectamenteAlCambiarDeMes()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 11, 30, 23, 50, 0) };
+        var tarjeta = new UsoFrecuente(clock);
+        var colectivo = new Colectivo("144", clock);
+
+        tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(10000);
+
+        // Hacer algunos viajes en noviembre (no necesariamente 35)
+        for (int i = 0; i < 10; i++)
+        {
+            colectivo.PagarCon(tarjeta);
+            clock.Now = clock.Now.AddMinutes(10);
+        }
+
+        // Cambiar a diciembre
+        clock.Now = new DateTime(2025, 12, 1, 0, 0, 0);
+
+        // Primer viaje del nuevo mes → debería ser tarifa completa (1580)
+        colectivo.PagarCon(tarjeta);
+        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01),
+            "El primer viaje del nuevo mes debería cobrar tarifa completa (1580)");
+    }
+
+    [Test]
+    public void Pagar_ConSaldoInsuficiente_NoIncrementaContadorDeViajes()
+    {
+        var clock = new FakeClock { Now = new DateTime(2025, 11, 20, 8, 0, 0) };
+        var tarjeta = new UsoFrecuente(clock);
+        var colectivo = new Colectivo("144", clock);
+
+        tarjeta.Cargar(2000);
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        clock.Now = clock.Now.AddMinutes(10);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        clock.Now = clock.Now.AddMinutes(10);
+
+        Assert.That(colectivo.PagarCon(tarjeta), Is.False);
+        Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01));
+
+        tarjeta.Cargar(10000);
+        clock.Now = clock.Now.AddMinutes(10);
+        Assert.That(colectivo.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
+    }
+
     public class FakeClock : IClock
     {
         public DateTime Now { get; set; } = DateTime.Now;
+
+        public FakeClock() { }
+        public FakeClock(DateTime initialTime) { Now = initialTime; }
+
+        public void AdvanceMinutes(int minutes) => Now = Now.AddMinutes(minutes);
+        public void AdvanceDays(int days) => Now = Now.AddDays(days);
+        public void AdvanceMonths(int months) => Now = Now.AddMonths(months);
     }
 }
-
