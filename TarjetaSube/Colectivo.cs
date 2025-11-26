@@ -30,7 +30,8 @@ namespace TarjetaSube
 
             double montoBase = tarjeta.ObtenerMontoAPagar(tarifaBase);
 
-            // ... (el resto del código de trasbordo se mantiene igual)
+            // LÓGICA DE TRASBORDO - COMENTADA TEMPORALMENTE
+            /*
             bool esTrasbordo = false;
 
             var tipoTarjeta = tarjeta.GetType();
@@ -52,11 +53,13 @@ namespace TarjetaSube
                     bool diaValido = ahora.DayOfWeek >= DayOfWeek.Monday && ahora.DayOfWeek <= DayOfWeek.Saturday;
                     bool horarioValido = ahora.Hour >= 7 && ahora.Hour < 22;
 
-                    //esTrasbordo = dentroDeHora && lineaDistinta && diaValido && horarioValido;
+                    esTrasbordo = dentroDeHora && lineaDistinta && diaValido && horarioValido;
                 }
             }
+            */
 
-            double montoFinal = esTrasbordo ? 0 : montoBase;
+            // CORRECCIÓN: Usar montoBase directamente sin trasbordo por ahora
+            double montoFinal = montoBase; // esTrasbordo ? 0 : montoBase;
 
             bool pagado = tarjeta.Pagar(montoFinal);
             if (!pagado)
@@ -65,12 +68,14 @@ namespace TarjetaSube
                 return false;
             }
 
-            // Actualizar campos de trasbordo
+            // Actualizar campos de trasbordo - COMENTADO TEMPORALMENTE
+            /*
             if (campoFecha != null && campoLinea != null)
             {
                 campoFecha.SetValue(tarjeta, ahora);
                 campoLinea.SetValue(tarjeta, this.linea);
             }
+            */
 
             UltimoBoleto = new Boleto(
                 idTarjeta: tarjeta.Id,
@@ -78,7 +83,7 @@ namespace TarjetaSube
                 fechaHora: ahora,
                 tipoTarjeta: tarjeta.ObtenerTipo(),
                 montoDescontado: montoFinal,
-                tarifaNormal: tarifaBase, // CORRECCIÓN: usar la tarifa base correcta
+                tarifaNormal: tarifaBase,
                 saldoRestante: tarjeta.Saldo
             );
 
