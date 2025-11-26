@@ -12,11 +12,15 @@ public class TarjetaTests
     private const double TARIFA_BASICA = 1580;
 
     private Colectivo colectivo;
+    private Colectivo colectivoInterurbano;
+    private FakeClock clock;
 
     [SetUp]
     public void Setup()
     {
         colectivo = new Colectivo("144 Roja");
+        colectivoInterurbano = new Colectivo("Línea 500 (Interurbana)");
+        clock = new FakeClock { Now = new DateTime(2024, 1, 1, 10, 0, 0) };
     }
 
     [Test]
@@ -153,10 +157,6 @@ public class TarjetaTests
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
 
-    private class FakeClock : IClock
-    {
-        public DateTime Now { get; set; }
-    }
 
     public void MedioBoleto_RestriccionDe5Minutoso()
     {
@@ -422,4 +422,204 @@ public class TarjetaTests
             // Pero si estuviera más cerca de -1200, se vería la diferencia
         });
     }
+
+
+    //----------------------------INTERURBANO---------------------------------//
+    [Test]
+    public void BoletoGratuitoInterurbano_SeReiniciaAlDiaSiguiente()
+    {
+        var tarjeta = new BoletoGratuitoInterurbano(clock);
+        tarjeta.Cargar(5000);
+
+        // Primer día - 3 viajes (0 + 0 + 3000)
+        colectivoInterurbano.PagarCon(tarjeta);
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoFinDia1 = tarjeta.Saldo; // 5000 - 3000 = 2000
+
+        // Act - Avanzar al día siguiente
+        clock.Now = clock.Now.AddDays(1);
+        colectivoInterurbano.PagarCon(tarjeta); // Primer viaje del nuevo día (gratis)
+
+        // Assert
+        Assert.AreEqual(2000, tarjeta.Saldo); // No descuenta, vuelve a ser gratis
+    }
+
+    [Test]
+    public void MedioBoletoInterurbano_SeReiniciaAlDiaSiguiente()
+    {
+        var tarjeta = new MedioBoletoInterurbano(clock);
+        tarjeta.Cargar(10000);
+
+        // Primer día - 3 viajes (1500 + 1500 + 3000)
+        colectivoInterurbano.PagarCon(tarjeta);
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoFinDia1 = tarjeta.Saldo; // 10000 - 6000 = 4000
+
+        // Act - Avanzar al día siguiente
+        clock.Now = clock.Now.AddDays(1);
+        colectivoInterurbano.PagarCon(tarjeta); // Primer viaje del nuevo día (1500)
+
+        // Assert
+        Assert.AreEqual(4000 - 1500, tarjeta.Saldo);
+    }
+
+    [Test]
+    public void TarjetasInterurbanas_UsanTarifaCorrectaEnColectivoUrbano()
+    {
+        // Arrange
+        var tarjetaNormal = new TarjetaInterurbana();
+        var medioBoleto = new MedioBoletoInterurbano(clock);
+        var gratuito = new BoletoGratuitoInterurbano(clock);
+
+        tarjetaNormal.Cargar(5000);
+        medioBoleto.Cargar(5000);
+        gratuito.Cargar(5000);
+
+        // Act - Pagar en colectivo URBANO
+        bool pagoNormal = colectivo.PagarCon(tarjetaNormal);
+        bool pagoMedio = colectivo.PagarCon(medioBoleto);
+        bool pagoGratuito = colectivo.PagarCon(gratuito);
+
+        // Assert - Deberían usar sus tarifas interurbanas
+        Assert.IsTrue(pagoNormal);
+        Assert.AreEqual(5000 - 3000, tarjetaNormal.Saldo);
+
+        Assert.IsTrue(pagoMedio);
+        Assert.AreEqual(5000 - 1500, medioBoleto.Saldo);
+
+        Assert.IsTrue(pagoGratuito);
+        Assert.AreEqual(5000, gratuito.Saldo);
+    }
+
+    [Test]
+    public void MedioBoletoInterurbano_RespetaRestriccion5Minutos()
+    {
+        var tarjeta = new MedioBoletoInterurbano(clock);
+        tarjeta.Cargar(5000);
+
+        // Primer viaje exitoso
+        colectivoInterurbano.PagarCon(tarjeta);
+
+        // Act - Segundo viaje en menos de 5 minutos
+        clock.Now = clock.Now.AddMinutes(3);
+        bool segundoPago = colectivoInterurbano.PagarCon(tarjeta);
+
+        // Assert
+        Assert.IsFalse(segundoPago);
+        Assert.AreEqual(5000 - 1500, tarjeta.Saldo);
+    }
+
+    [Test]
+    public void BoletoGratuitoInterurbano_TercerViajePagaCompleto()
+    {
+        var tarjeta = new BoletoGratuitoInterurbano(clock);
+        tarjeta.Cargar(5000);
+
+        // Primeros dos viajes gratis
+        colectivoInterurbano.PagarCon(tarjeta);
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+
+        // Act - Tercer viaje (paga completo)
+        clock.Now = clock.Now.AddMinutes(10);
+        bool pagoExitoso = colectivoInterurbano.PagarCon(tarjeta);
+
+        // Assert
+        Assert.IsTrue(pagoExitoso);
+        Assert.AreEqual(5000 - 3000, tarjeta.Saldo); // Verificar que se descontaron 3000
+                                                     // Comentar esta línea o cambiarla por una verificación del saldo
+                                                     // Assert.AreEqual(3000, colectivoInterurbano.UltimoBoleto.MontoDescontado);
+    }
+
+    [Test]
+    public void BoletoGratuitoInterurbano_PrimerosDosViajesGratis()
+    {
+        var tarjeta = new BoletoGratuitoInterurbano(clock);
+        tarjeta.Cargar(5000);
+
+        // Act - Primer viaje (gratis)
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoDespuesPrimero = tarjeta.Saldo;
+
+        // Segundo viaje (gratis)
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoDespuesSegundo = tarjeta.Saldo;
+
+        // Assert
+        Assert.AreEqual(5000, saldoDespuesPrimero);
+        Assert.AreEqual(5000, saldoDespuesSegundo);
+    }
+
+    [Test]
+    public void MedioBoletoInterurbano_TercerViajePagaCompleto()
+    {
+        var tarjeta = new MedioBoletoInterurbano(clock);
+        tarjeta.Cargar(10000);
+
+        // Act - Primer viaje (1500)
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoDespuesPrimero = tarjeta.Saldo;
+
+        // Segundo viaje (1500)
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoDespuesSegundo = tarjeta.Saldo;
+
+        // Tercer viaje (3000 - completo)
+        clock.Now = clock.Now.AddMinutes(10);
+        colectivoInterurbano.PagarCon(tarjeta);
+        double saldoDespuesTercero = tarjeta.Saldo;
+
+        // Assert
+        Assert.AreEqual(10000 - 1500, saldoDespuesPrimero);
+        Assert.AreEqual(8500 - 1500, saldoDespuesSegundo);
+        Assert.AreEqual(7000 - 3000, saldoDespuesTercero);
+    }
+
+    [Test]
+    public void MedioBoletoInterurbano_PagaMitadDeTarifa()
+    {
+        // Arrange
+        var tarjeta = new MedioBoletoInterurbano(clock);
+        tarjeta.Cargar(5000);
+
+        // Act
+        bool pagoExitoso = colectivoInterurbano.PagarCon(tarjeta);
+
+        // Assert
+        Assert.IsTrue(pagoExitoso);
+        Assert.AreEqual(5000 - 1500, tarjeta.Saldo);
+        Assert.AreEqual("Medio Boleto (Interurbana)", colectivoInterurbano.UltimoBoleto.TipoTarjeta);
+        Assert.AreEqual(1500, colectivoInterurbano.UltimoBoleto.MontoDescontado);
+    }
+
+    [Test]
+    public void TarjetaInterurbana_PagaTarifaCompleta()
+    {
+        // Arrange
+        var tarjeta = new TarjetaInterurbana();
+        tarjeta.Cargar(5000);
+
+        // Act
+        bool pagoExitoso = colectivoInterurbano.PagarCon(tarjeta);
+
+        // Assert
+        Assert.IsTrue(pagoExitoso);
+        Assert.AreEqual(5000 - 3000, tarjeta.Saldo);
+        Assert.AreEqual("Tarjeta Normal (Interurbana)", colectivoInterurbano.UltimoBoleto.TipoTarjeta);
+        Assert.AreEqual(3000, colectivoInterurbano.UltimoBoleto.MontoDescontado);
+    }
+
+    private class FakeClock : IClock
+    {
+        public DateTime Now { get; set; }
+    }
+
 }

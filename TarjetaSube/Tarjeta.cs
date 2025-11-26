@@ -79,7 +79,7 @@ namespace TarjetaSube
         private readonly IClock _clock;
         private DateTime? _ultimoViajeFecha = null;
         private int _viajesHoy = 0;
-        // La tarifa a obtener ES la mitad, pero la lógica de cobro está en Pagar()
+
         public override double ObtenerMontoAPagar(double tarifa) => tarifa / 2.0;
         public override string ObtenerTipo() => "Medio Boleto";
 
@@ -88,7 +88,7 @@ namespace TarjetaSube
             _clock = clock ?? new SystemClock();
         }
 
-        public override bool Pagar(double monto) // monto SIEMPRE es TARIFA_BASICA (1580)
+        public override bool Pagar(double monto) // monto YA VIENE DESCONTADO (790)
         {
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
@@ -105,15 +105,15 @@ namespace TarjetaSube
                 TimeSpan diferencia = ahora - _ultimoViajeFecha.Value;
                 if (diferencia < TimeSpan.FromMinutes(5))
                 {
-                    return false; // ¡No puede viajar tan rápido!
+                    return false;
                 }
             }
 
-            // 1. Determinar el monto real a debitar (790 o 1580)
-            // Usamos 'monto' porque 'monto' aquí es 1580 (TARIFA_BASICA)
-            double montoADescontar = _viajesHoy < 2 ? monto / 2.0 : monto;
+            // CORRECCIÓN: No dividir el monto otra vez
+            // El monto YA es el correcto (790 para los primeros 2 viajes)
+            // Para el tercer viaje en adelante, usar tarifa completa
+            double montoADescontar = _viajesHoy < 2 ? monto : monto * 2; // monto * 2 = 790 * 2 = 1580
 
-            // 2. Intentar pagar el monto ya ajustado. 
             bool resultado = base.Pagar(montoADescontar);
 
             if (resultado)
@@ -132,7 +132,6 @@ namespace TarjetaSube
         private DateTime? _ultimoViajeFecha = null;
         private int _viajesHoy = 0;
 
-        // La tarifa a obtener ES 0, pero la lógica de cobro está en Pagar()
         public override double ObtenerMontoAPagar(double tarifa) => 0;
         public override string ObtenerTipo() => "Boleto Gratuito";
 
@@ -141,24 +140,21 @@ namespace TarjetaSube
             _clock = clock ?? new SystemClock();
         }
 
-        public override bool Pagar(double monto) // monto SIEMPRE es TARIFA_BASICA (1580)
+        public override bool Pagar(double monto) // monto SIEMPRE es 0 (gratis)
         {
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
 
-            // 1. Reiniciar contador si es un nuevo día
             if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
             {
                 _viajesHoy = 0;
             }
 
-            bool resultado;
-            double montoAPagar = (_viajesHoy < 2) ? 0 : monto;
+            // CORRECCIÓN: Para el 3er viaje, usar la tarifa básica completa
+            double montoAPagar = (_viajesHoy < 2) ? 0 : 1580; // No usar 'monto' porque siempre es 0
 
-            // 2. Intentar pagar (0 o 1580)
-            resultado = base.Pagar(montoAPagar);
+            bool resultado = base.Pagar(montoAPagar);
 
-            // 3. Actualizar el contador y la fecha SOLO si el pago fue exitoso
             if (resultado)
             {
                 _viajesHoy++;
@@ -184,59 +180,112 @@ namespace TarjetaSube
     {
         private const double TARIFA_INTERURBANA = 3000;
 
-        // Sobreescribe ObtenerMontoAPagar para devolver la tarifa interurbana.
-        // Aunque no es estrictamente necesario, mantiene el polimorfismo.
+        // CORRECCIÓN: Usamos la tarifa interurbana en lugar de la que viene del colectivo
         public override double ObtenerMontoAPagar(double tarifa) => TARIFA_INTERURBANA;
 
         public override string ObtenerTipo() => "Tarjeta Normal (Interurbana)";
     }
 
-
-    public class MedioBoletoInterurbano : MedioBoleto
+    public class MedioBoletoInterurbano : Tarjeta
     {
         private const double TARIFA_INTERURBANA = 3000;
+        private readonly IClock _clock;
+        private DateTime? _ultimoViajeFecha = null;
+        private int _viajesHoy = 0;
 
-        // Llama al constructor base de MedioBoleto para inicializar el reloj.
-        public MedioBoletoInterurbano(IClock? clock = null) : base(clock) { }
+        // CORRECCIÓN: No heredar de MedioBoleto, heredar de Tarjeta y reimplementar la lógica
+        public MedioBoletoInterurbano(IClock? clock = null)
+        {
+            _clock = clock ?? new SystemClock();
+        }
 
-        // El monto a pagar es la mitad de la tarifa interurbana ($1500), independientemente de la tarifa que se pase.
         public override double ObtenerMontoAPagar(double tarifa) => TARIFA_INTERURBANA / 2.0;
 
         public override string ObtenerTipo() => "Medio Boleto (Interurbana)";
 
-        // Sobreescribimos Pagar para asegurar que la lógica base (MedioBoleto.Pagar) use 
-        // TARIFA_INTERURBANA ($3000) como la tarifa base al aplicar el descuento.
         public override bool Pagar(double monto)
         {
-            // Se llama a Pagar de la clase base, pero forzando el monto de $3000.
-            return base.Pagar(TARIFA_INTERURBANA);
+            DateTime ahora = _clock.Now;
+            DateTime hoy = ahora.Date;
+
+            // Reiniciar contador si es un nuevo día
+            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
+            {
+                _viajesHoy = 0;
+            }
+
+            // Verificar intervalo de 5 minutos
+            if (_ultimoViajeFecha.HasValue)
+            {
+                TimeSpan diferencia = ahora - _ultimoViajeFecha.Value;
+                if (diferencia < TimeSpan.FromMinutes(5))
+                {
+                    return false;
+                }
+            }
+
+            // CORRECCIÓN: Usar TARIFA_INTERURBANA como base para los cálculos
+            double montoADescontar = _viajesHoy < 2 ? TARIFA_INTERURBANA / 2.0 : TARIFA_INTERURBANA;
+
+            bool resultado = base.Pagar(montoADescontar);
+
+            if (resultado)
+            {
+                _viajesHoy++;
+                _ultimoViajeFecha = ahora;
+            }
+
+            return resultado;
         }
     }
 
-    public class BoletoGratuitoInterurbano : BoletoGratuito
+    public class BoletoGratuitoInterurbano : Tarjeta
     {
         private const double TARIFA_INTERURBANA = 3000;
+        private readonly IClock _clock;
+        private DateTime? _ultimoViajeFecha = null;
+        private int _viajesHoy = 0;
 
-        // Llama al constructor base de BoletoGratuito para inicializar el reloj.
-        public BoletoGratuitoInterurbano(IClock? clock = null) : base(clock) { }
+        // CORRECCIÓN: No heredar de BoletoGratuito, heredar de Tarjeta
+        public BoletoGratuitoInterurbano(IClock? clock = null)
+        {
+            _clock = clock ?? new SystemClock();
+        }
+
+        public override double ObtenerMontoAPagar(double tarifa) => 0;
 
         public override string ObtenerTipo() => "Boleto Gratuito (Interurbana)";
 
-        // Sobreescribimos Pagar para asegurar que la lógica base (BoletoGratuito.Pagar) use 
-        // TARIFA_INTERURBANA ($3000) como la tarifa base para el tercer viaje (cobro completo).
         public override bool Pagar(double monto)
         {
-            // Se llama a Pagar de la clase base, pero forzando el monto de $3000.
-            return base.Pagar(TARIFA_INTERURBANA);
+            DateTime ahora = _clock.Now;
+            DateTime hoy = ahora.Date;
+
+            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
+            {
+                _viajesHoy = 0;
+            }
+
+            // CORRECCIÓN: Usar TARIFA_INTERURBANA como base
+            double montoAPagar = (_viajesHoy < 2) ? 0 : TARIFA_INTERURBANA;
+
+            bool resultado = base.Pagar(montoAPagar);
+
+            if (resultado)
+            {
+                _viajesHoy++;
+                _ultimoViajeFecha = ahora;
+            }
+
+            return resultado;
         }
     }
 
-    public class FranquiciaCompletaInterurbana : FranquiciaCompleta
+    public class FranquiciaCompletaInterurbana : Tarjeta
     {
+        public override double ObtenerMontoAPagar(double tarifa) => 0;
+        public override bool Pagar(double monto) => true;
         public override string ObtenerTipo() => "Franquicia Completa (Interurbana)";
-
-        // Pagar siempre devuelve true y no cobra nada (como la clase base).
-        // No necesita sobrescribir Pagar ni ObtenerMontoAPagar.
     }
 
     public interface IClock
