@@ -148,6 +148,11 @@ namespace TarjetaSube
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
 
+            if (monto == 0)
+            {
+                return base.Pagar(0);
+            }
+
             // Reiniciar contador si es un nuevo día
             if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
             {
@@ -209,6 +214,11 @@ namespace TarjetaSube
         {
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
+
+            if (monto == 0)
+            {
+                return base.Pagar(0);
+            }
 
             // Reiniciar contador si es un nuevo día
             if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
