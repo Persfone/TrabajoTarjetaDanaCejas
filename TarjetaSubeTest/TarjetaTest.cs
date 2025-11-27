@@ -214,17 +214,17 @@ public class TarjetaTests
         // Primer viaje con medio boleto (790)
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True, "Primer viaje debería ser exitoso con medio boleto");
         saldoEsperado -= 790;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del primer viaje, saldo debería ser {saldoEsperado}");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del primer viaje, saldo debería ser {saldoEsperado}");//-1210
 
         clock.AdvanceMinutes(3); // Solo pasaron 3 minutos
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False, "No debería poder pagar antes de los 5 minutos");
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), "El saldo no debería cambiar cuando el pago es rechazado por tiempo");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), "El saldo no debería cambiar cuando el pago es rechazado por tiempo");//0
 
         // Segundo viaje con medio boleto (790) - aún en el límite de 2 viajes por día
         clock.AdvanceMinutes(6);
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True, "Segundo viaje debería ser exitoso con medio boleto");
         saldoEsperado -= 790;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del segundo viaje, saldo debería ser {saldoEsperado}");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del segundo viaje, saldo debería ser {saldoEsperado}"); //420
 
         // PASA 1 DÍA (SE REINICIA EL CONTADOR DE MEDIO BOLETO)
         clock.AdvanceDays(1);
@@ -232,16 +232,16 @@ public class TarjetaTests
         // VUELVE A PAGAR 1 VIAJE - debería aplicar medio boleto nuevamente
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True, "Cuarto viaje (nuevo día) debería ser exitoso con medio boleto");
         saldoEsperado -= 790;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del cuarto viaje (nuevo día), saldo debería ser {saldoEsperado} (medio boleto reiniciado)");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del cuarto viaje (nuevo día), saldo debería ser {saldoEsperado} (medio boleto reiniciado)"); // -370
 
         clock.AdvanceMinutes(6);
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True, "Quinto viaje (nuevo día) debería ser exitoso con medio boleto");
         saldoEsperado -= 790;
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del cuarto viaje (nuevo día), saldo debería ser {saldoEsperado}");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del cuarto viaje (nuevo día), saldo debería ser {saldoEsperado}"); //-1160
 
         clock.AdvanceMinutes(6);
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False, "Cuarto viaje debería fallar por exceso de saldo negativo");
-        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), "El saldo no debería cambiar cuando el pago es rechazado por saldo insuficiente");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), "El saldo no debería cambiar cuando el pago es rechazado por saldo insuficiente"); //-1950
         
 
     }
