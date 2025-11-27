@@ -233,6 +233,17 @@ public class TarjetaTests
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True, "Cuarto viaje (nuevo día) debería ser exitoso con medio boleto");
         saldoEsperado -= 790;
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del cuarto viaje (nuevo día), saldo debería ser {saldoEsperado} (medio boleto reiniciado)");
+
+        clock.AdvanceMinutes(6);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True, "Quinto viaje (nuevo día) debería ser exitoso con medio boleto");
+        saldoEsperado -= 790;
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), $"Después del cuarto viaje (nuevo día), saldo debería ser {saldoEsperado}");
+
+        clock.AdvanceMinutes(6);
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False, "Cuarto viaje debería fallar por exceso de saldo negativo");
+        Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), "El saldo no debería cambiar cuando el pago es rechazado por saldo insuficiente");
+        
+
     }
 
     [Test]
