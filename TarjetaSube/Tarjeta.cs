@@ -128,7 +128,7 @@ namespace TarjetaSube
             ultimaLineaTrasbordo = lineaActual;
         }
     }
-
+    /*
     public class MedioBoleto : Tarjeta
     {
         private readonly IClock _clock;
@@ -194,7 +194,7 @@ namespace TarjetaSube
             return resultado;
         }
     }
-
+    
     public class BoletoGratuito : Tarjeta
     {
         private readonly IClock _clock;
@@ -255,7 +255,7 @@ namespace TarjetaSube
         public override bool Pagar(double monto) => true;
         public override string ObtenerTipo() => "Franquicia Completa";
     }
-
+    */
     //---------------------------INTERURBANA---------------------------------//
 
     public class TarjetaInterurbana : Tarjeta ///////////---- interurbano es herencia de colectivo----/////
