@@ -630,6 +630,29 @@ public class TarjetaTests
     }
 
     [Test]
+    public void Trasbordo_TienePrioridadSobreMedioBoleto_CuandoCorresponde()
+    {
+        var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0)); // Día hábil
+        var medio = new MedioBoleto(clock);
+        medio.Cargar(10000);
+
+        var colectivo144Roja = new Colectivo("144 Roja", clock);
+        var colectivo144Negra = new Colectivo("144 Negra", clock);
+
+        // Primer viaje: paga medio boleto
+        colectivo144Roja.PagarCon(medio);
+        Assert.That(colectivo144Roja.UltimoBoleto?.MontoDescontado, Is.EqualTo(790));
+
+        clock.AdvanceMinutes(30);
+
+        // Segundo viaje: cumple trasbordo → debe salir GRATIS, NO medio boleto ($790)
+        colectivo144Negra.PagarCon(medio);
+        Assert.That(colectivo144Negra.UltimoBoleto?.MontoDescontado, Is.EqualTo(0));
+        Assert.That(colectivo144Negra.UltimoBoleto?.EsTrasbordo, Is.True);
+        Assert.That(colectivo144Negra.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Medio Boleto")); // opcional
+    }
+
+    [Test]
     public void Trasbordo_NoGratuito_SiMismaLinea()
     {
         var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0));
