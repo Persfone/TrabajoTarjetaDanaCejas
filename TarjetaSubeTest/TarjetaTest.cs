@@ -608,6 +608,8 @@ public class TarjetaTests
     }
 
     // ==================== TESTS DE TRASBORDO ====================
+
+    //------------------------------------------TEST TRANSBORDO ITERACION 5 ------------------------------//
     [Test]
     public void Trasbordo_Gratuito_CuandoCumpleCondiciones()
     {
@@ -628,7 +630,7 @@ public class TarjetaTests
         Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(0));
         Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.True);
     }
-
+    //------------------------------------------TEST TRANSBORDO ITERACION 5 ------------------------------//
     [Test]
     public void Trasbordo_TienePrioridadSobreMedioBoleto_CuandoCorresponde()
     {
