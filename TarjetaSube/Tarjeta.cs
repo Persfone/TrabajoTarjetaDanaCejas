@@ -258,7 +258,7 @@ namespace TarjetaSube
 
     //---------------------------INTERURBANA---------------------------------//
 
-    public class TarjetaInterurbana : Tarjeta
+    public class TarjetaInterurbana : Tarjeta ///////////---- interurbano es herencia de colectivo----/////
     {
         public override double ObtenerMontoAPagar(double tarifa) => 3000;
         public override string ObtenerTipo() => "Tarjeta Normal (Interurbana)";
@@ -383,7 +383,7 @@ namespace TarjetaSube
 
     //---------------------------USO FRECUENTE---------------------------------//
 
-    public class UsoFrecuente : Tarjeta
+    public class UsoFrecuente : Tarjeta /////////////////// un descuento de tarjeta -- no aplica a las franquicias
     {
         private readonly IClock _clock;
         private int _viajesMes = 0;

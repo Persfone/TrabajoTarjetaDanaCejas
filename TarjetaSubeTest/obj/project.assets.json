@@ -965,23 +965,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\dana\\.nuget\\packages\\": {},
+    "C:\\Users\\Ciro\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\dana\\source\\repos\\TTDanaCejas\\TarjetaSubeTest\\TarjetaSubeTest.csproj",
+      "projectUniqueName": "C:\\Users\\Ciro\\source\\repos\\TTDanaCejas\\TarjetaSubeTest\\TarjetaSubeTest.csproj",
       "projectName": "TarjetaSubeTest",
-      "projectPath": "C:\\Users\\dana\\source\\repos\\TTDanaCejas\\TarjetaSubeTest\\TarjetaSubeTest.csproj",
-      "packagesPath": "C:\\Users\\dana\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\dana\\source\\repos\\TTDanaCejas\\TarjetaSubeTest\\obj\\",
+      "projectPath": "C:\\Users\\Ciro\\source\\repos\\TTDanaCejas\\TarjetaSubeTest\\TarjetaSubeTest.csproj",
+      "packagesPath": "C:\\Users\\Ciro\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Ciro\\source\\repos\\TTDanaCejas\\TarjetaSubeTest\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\dana\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Ciro\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -996,8 +996,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\dana\\source\\repos\\TTDanaCejas\\TarjetaSube\\TarjetaSube.csproj": {
-              "projectPath": "C:\\Users\\dana\\source\\repos\\TTDanaCejas\\TarjetaSube\\TarjetaSube.csproj"
+            "C:\\Users\\Ciro\\source\\repos\\TTDanaCejas\\TarjetaSube\\TarjetaSube.csproj": {
+              "projectPath": "C:\\Users\\Ciro\\source\\repos\\TTDanaCejas\\TarjetaSube\\TarjetaSube.csproj"
             }
           }
         }

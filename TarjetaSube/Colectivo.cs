@@ -5,7 +5,7 @@ namespace TarjetaSube
     public class Colectivo
     {
         public const double TARIFA_BASICA = 1580;
-        public const double TARIFA_INTERURBANA = 3000;
+        public const double TARIFA_INTERURBANA = 3000; //----------para el tema de interurbano debe ser una clase heredada de colectivo -----------//
 
         private readonly string linea;
         private readonly IClock clock;
