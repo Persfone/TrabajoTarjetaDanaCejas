@@ -99,7 +99,6 @@ namespace TarjetaSubeTest
             //segundo retiro con 1 multa pendiente
             bool segundoResultado = _miBiciTuBici.PagarCon(tarjeta);
 
-            //assert
             Assert.IsTrue(segundoResultado, "El segundo retiro debería ser exitoso con multa");
             Assert.IsNotNull(_miBiciTuBici.UltimoBoleto, "Debería generarse un boleto");
             Assert.AreEqual(MiBiciTuBici.TARIFA_DIARIA + MiBiciTuBici.MULTA_POR_EXCESO, _miBiciTuBici.UltimoBoleto!.MontoPagado, "Debería cobrarse tarifa + 1 multa");
@@ -209,7 +208,7 @@ namespace TarjetaSubeTest
             var tarjeta = new FranquiciaCompleta();
 
             bool resultado = _miBiciTuBici.PagarCon(tarjeta);
-=
+
             Assert.IsTrue(resultado, "El pago debería ser exitoso con FranquiciaCompleta");
             Assert.IsNotNull(_miBiciTuBici.UltimoBoleto, "Debería generarse un boleto");
             Assert.AreEqual("Franquicia Completa", _miBiciTuBici.UltimoBoleto!.TipoTarjeta, "Debería reconocer el tipo de tarjeta");

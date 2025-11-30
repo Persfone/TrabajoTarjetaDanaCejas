@@ -121,7 +121,7 @@ public class MedioBoletoPagarConTests
 
     }
 
-    // ==================== TESTS DE TRASBORDO ====================
+    // ==================== TESTS DE TRASBORDO ====================//
 
     //------------------------------------------TEST DE TRANSBORDO ITERACION 5 ------------------------------//
     [Test]

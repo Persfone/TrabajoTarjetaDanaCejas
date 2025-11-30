@@ -61,7 +61,7 @@ namespace TarjetaSube
                 UltimoBoleto = null;
                 return false;
             }
-o
+
             tarjeta.ActualizarTrasbordo(ahora, this.linea);
 
             UltimoBoleto = new Boleto(
