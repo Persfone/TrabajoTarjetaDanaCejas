@@ -25,10 +25,10 @@ namespace TarjetaSube
         {
             DateTime ahora = clock.Now;
 
-            // Calcular monto a pagar (tarifa + multas pendientes)
+            // calcula monto a pagar (tarifa + multas pendientes)
             double montoAPagar = CalcularMontoAPagar(tarjeta);
 
-            // Intentar realizar el pago
+            // intentar realizar el pago
             bool pagado = tarjeta.Pagar(montoAPagar);
 
             if (!pagado)
@@ -37,19 +37,19 @@ namespace TarjetaSube
                 return false;
             }
 
-            // Solo limpiar multas pendientes si el pago fue exitoso
+            // limpia las multas pendientes si es que fue exitoso 
             if (multasPendientes.ContainsKey(tarjeta.Id))
             {
                 multasPendientes.Remove(tarjeta.Id);
             }
 
-            // Registrar el retiro exitoso
+            // retiro exitoso
             RegistrarRetiro(tarjeta, ahora, montoAPagar);
 
             return true;
         }
 
-        // Método para registrar la devolución de la bicicleta
+        // necesite este metodo para dejar de calcular las multas por el tiempo
         public void DevolvioLaBici(Tarjeta tarjeta)
         {
             DateTime ahora = clock.Now;
@@ -58,15 +58,14 @@ namespace TarjetaSube
             {
                 DateTime ultimoRetiro = ultimosRetiros[tarjeta.Id];
 
-                // Calcular multas acumuladas hasta el momento de la devolución
+                //multas cuando devuelte
                 int multas = CalcularMultasAcumuladas(ultimoRetiro, ahora);
 
                 if (multas > 0)
                 {
-                    // Guardar multas pendientes para el próximo retiro
+
                     multasPendientes[tarjeta.Id] = multas;
 
-                    // Registrar en historial
                     if (!historialMultas.ContainsKey(tarjeta.Id))
                     {
                         historialMultas[tarjeta.Id] = new List<DateTime>();
@@ -74,7 +73,6 @@ namespace TarjetaSube
                     historialMultas[tarjeta.Id].Add(ahora);
                 }
 
-                // Eliminar el último retiro para que no siga acumulando multas
                 ultimosRetiros.Remove(tarjeta.Id);
             }
         }
@@ -83,7 +81,6 @@ namespace TarjetaSube
         {
             double montoTotal = TARIFA_DIARIA;
 
-            // Verificar si hay multas pendientes de devoluciones anteriores
             if (multasPendientes.ContainsKey(tarjeta.Id))
             {
                 montoTotal += multasPendientes[tarjeta.Id] * MULTA_POR_EXCESO;
@@ -97,12 +94,10 @@ namespace TarjetaSube
             TimeSpan tiempoTranscurrido = ahora - ultimoRetiro;
             double totalMinutos = tiempoTranscurrido.TotalMinutes;
 
-            // No hay multa si es < 120 minutos
+            // la primera hora (60mins) se cobra por la tarifa default, dsp si pasan otros 60 mins se cobra multa es decir si pasan +120 mins hay una multa
             if (totalMinutos < 120)
                 return 0;
 
-            // Calcular multas: cada 60 minutos después de los primeros 60 genera 1 multa
-            // Pero la primera multa aparece a los 120 minutos
             int multas = (int)Math.Floor(totalMinutos / 60) - 1;
             return multas;
         }
@@ -112,7 +107,7 @@ namespace TarjetaSube
             bool huboMulta = false;
             int multasAplicadas = 0;
 
-            // Verificar si se cobraron multas en este pago
+
             double montoMultas = montoPagado - TARIFA_DIARIA;
             if (montoMultas > 0)
             {
@@ -120,10 +115,10 @@ namespace TarjetaSube
                 huboMulta = true;
             }
 
-            // Actualizar el último retiro
+
             ultimosRetiros[tarjeta.Id] = ahora;
 
-            // Crear boleto
+            // boleto
             UltimoBoleto = new BoletoBici(
                 idTarjeta: tarjeta.Id,
                 fechaHora: ahora,
@@ -135,19 +130,16 @@ namespace TarjetaSube
                 huboMulta: huboMulta
             );
         }
-
-        // Método para consultar multas pendientes de una tarjeta
+        //multas pendientes
         public int ObtenerMultasPendientes(Tarjeta tarjeta)
         {
             int multas = 0;
 
-            // Multas pendientes por cobrar
             if (multasPendientes.ContainsKey(tarjeta.Id))
             {
                 multas += multasPendientes[tarjeta.Id];
             }
 
-            // Multas acumulándose actualmente (si hay retiro activo)
             if (ultimosRetiros.ContainsKey(tarjeta.Id))
             {
                 DateTime ultimoRetiro = ultimosRetiros[tarjeta.Id];
@@ -158,7 +150,7 @@ namespace TarjetaSube
             return multas;
         }
 
-        // Método para obtener el historial de multas de una tarjeta
+        // historial del multas 
         public List<DateTime> ObtenerHistorialMultas(Tarjeta tarjeta)
         {
             if (historialMultas.ContainsKey(tarjeta.Id))

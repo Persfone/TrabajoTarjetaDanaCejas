@@ -10,7 +10,7 @@ public class MedioBoletoPagarConTests
     private const double SALDO_NEGATIVO_MAX = -1200;
     private const double TARIFA_BASICA = 1580;
     private const double TARIFA_NORMAL = 1580.0;     // Viajes 1-29 y 81+
-    private const double TARIFA_20_DTO = 1264.0;    // 1580 * 0.8 = 1264.0 (Viajes 30-59)
+    private const double TARIFA_20_DTO = 1264.0;    // 1580 * 0.8 = 1264.0 (viajes 30-59)
     private const double TARIFA_25_DTO = 1185.0;
 
     private Colectivo colectivo;
@@ -20,11 +20,10 @@ public class MedioBoletoPagarConTests
     [SetUp]
     public void Setup()
     {
-        // 1. Inicializar el clock primero
+        //inicializar el clock primero
         clock = new FakeClock { Now = new DateTime(2024, 1, 1, 10, 0, 0) };
 
-        // 2. Asignar a los campos de la clase (quitando el tipo 'Colectivo')
-        // Es buena práctica pasar el clock a todos los colectivos para control de tiempo en tests
+        //asignar a los campos de la clase 
         colectivo = new Colectivo("144 Roja", clock);
         colectivoInterurbano = new Interurbano("Gálvez", clock);
     }
@@ -39,8 +38,11 @@ public class MedioBoletoPagarConTests
         public void AdvanceMonths(int months) => Now = Now.AddMonths(months);
     }
 
+    //======================= MEDIO BOLETO ==================================//
 
-    //-------------------------------------------TEST DE PAGAR CON 2 DE ITERACION 5 -----------------------------//
+    //-------------------------------------------TEST DE PAGAR CON 2 DE ITERACION 5 -------------------------------------//
+
+            /*Se pagan dos boletos a mitad de precio y el tercero a precio normal. Los mismo que el anterior.*/
     [Test]
     public void MedioBoleto_MaximoDosViajesConDescuentoPorDia_TercerViajeCobraCompleto()
     {
@@ -70,6 +72,8 @@ public class MedioBoletoPagarConTests
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01));
     }
     //------------------------ TEST DE PAGAR CON 1 ITERACION 5 -----------------------------//
+    /*Se pueden pagar dos boletos a mitad de precio. Verificando que el tiempo correspondiente paso entre uno y otro,
+                que hay saldo suficiente y que el saldo negativo también permite pagar medio boleto.*/
     [Test]
     public void MedioBoleto_MaximoDosViajesConDescuentoPorDia_ConSaldoNegativo()
     {

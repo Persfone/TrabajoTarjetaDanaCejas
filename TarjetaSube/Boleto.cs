@@ -11,7 +11,7 @@ namespace TarjetaSube
         public double SaldoRestante { get; }
         public double MontoTotalAbonado { get; }
         public double TarifaNormal { get; }
-        public bool EsTrasbordo { get; }  // AQUÍ ESTABA EL ERROR
+        public bool EsTrasbordo { get; }  
 
         public Boleto(Guid idTarjeta, string linea, DateTime fechaHora,
                       string tipoTarjeta, double montoDescontado, double tarifaNormal,
@@ -26,7 +26,6 @@ namespace TarjetaSube
             TarifaNormal = tarifaNormal;
             EsTrasbordo = esTrasbordo;
 
-            // Lógica de MontoTotalAbonado (corregida y simplificada)
             double saldoAntes = SaldoRestante + MontoDescontado;
             MontoTotalAbonado = saldoAntes < 0 ? TarifaNormal : MontoDescontado;
         }
