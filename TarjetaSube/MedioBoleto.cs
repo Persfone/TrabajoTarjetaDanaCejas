@@ -16,11 +16,14 @@ namespace TarjetaSube
             _clock = clock ?? new SystemClock();
         }
 
-        public override bool Pagar(double monto)
+        // CAMBIO: Se agrega tarifaBase
+        public override bool Pagar(double monto, double tarifaBase = 0)
         {
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
 
+            // NOTA: Se mantiene la lógica de "pago de 0" que estaba en el código original,
+            // aunque en la práctica, PagarCon le enviará el monto descontado (tarifa/2)
             if (monto == 0)
             {
                 return base.Pagar(0);
@@ -36,9 +39,7 @@ namespace TarjetaSube
             bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
             bool aplicaFranquicia = estaEnHorarioValido && _viajesHoy < 2;
 
-            // CORRECCIÓN: NO dividir por 2 otra vez - el monto YA VIENE con descuento
-            // Si NO aplica franquicia, debe pagar tarifa completa (1580)
-            double montoADescontar = aplicaFranquicia ? monto : 1580;
+            double montoADescontar = aplicaFranquicia ? monto : monto * 2;
 
             // Verificar intervalo de 5 minutos
             if (_ultimoViajeFecha.HasValue)

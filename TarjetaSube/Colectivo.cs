@@ -1,14 +1,14 @@
 ﻿using System;
+using System.Reflection; // Necesario para acceder a campos protegidos
 
 namespace TarjetaSube
 {
     public class Colectivo
     {
         public const double TARIFA_BASICA = 1580;
-        public const double TARIFA_INTERURBANA = 3000; //----------para el tema de interurbano debe ser una clase heredada de colectivo -----------//
 
-        private readonly string linea;
-        private readonly IClock clock;
+        protected readonly string linea; // Cambiado a protected para acceso en Interurbano
+        protected readonly IClock clock; // Cambiado a protected para acceso en Interurbano
 
         public Boleto? UltimoBoleto { get; private set; }
 
@@ -20,13 +20,15 @@ namespace TarjetaSube
 
         public string ObtenerLinea() => linea;
 
+        // NUEVO MÉTODO: Propiedad para que las tarjetas obtengan la tarifa base
+        public virtual double ObtenerTarifaBase() => TARIFA_BASICA;
+
         public bool PagarCon(Tarjeta tarjeta)
         {
             DateTime ahora = clock.Now;
 
-            // DETECCIÓN DE TARIFA: determinar si es interurbana o no
-            bool esInterurbana = tarjeta.ObtenerTipo().Contains("(Interurbana)");
-            double tarifaBase = esInterurbana ? TARIFA_INTERURBANA : TARIFA_BASICA;
+            // DETECCIÓN DE TARIFA: Usa el método virtual
+            double tarifaBase = ObtenerTarifaBase();
 
             double montoBase = tarjeta.ObtenerMontoAPagar(tarifaBase);
 
@@ -34,32 +36,32 @@ namespace TarjetaSube
             bool esTrasbordo = false;
 
             // Accedemos a los campos protegidos de trasbordo (están en Tarjeta base)
+            // Esto es necesario porque Tarjeta.Pagar no acepta una TarifaBase como argumento
             var tipoTarjeta = tarjeta.GetType();
-            var campoFecha = tipoTarjeta.GetField("ultimoViajeTrasbordo",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            var campoLinea = tipoTarjeta.GetField("ultimaLineaTrasbordo",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+            // Usamos Reflection para acceder a los campos protegidos de la clase base Tarjeta
+            var campoFecha = typeof(Tarjeta).GetField("ultimoViajeTrasbordo",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var campoLinea = typeof(Tarjeta).GetField("ultimaLineaTrasbordo",
+                BindingFlags.Instance | BindingFlags.NonPublic);
 
             if (campoFecha != null && campoLinea != null)
             {
                 var ultimoViaje = (DateTime?)campoFecha.GetValue(tarjeta);
                 var ultimaLinea = (string?)campoLinea.GetValue(tarjeta);
 
-                if (ultimoViaje.HasValue)
+                // REUTILIZAR EL MÉTODO DE VERIFICACIÓN DE TRASBORDO DE LA TARJETA
+                // Para no duplicar la lógica
+                if (tarjeta.EsTrasbordoValido(ahora, this.linea))
                 {
-                    var diferencia = ahora - ultimoViaje.Value;
-                    bool dentroDeHora = diferencia <= TimeSpan.FromHours(1);
-                    bool lineaDistinta = !string.Equals(ultimaLinea, this.linea, StringComparison.OrdinalIgnoreCase);
-                    bool diaValido = ahora.DayOfWeek >= DayOfWeek.Monday && ahora.DayOfWeek <= DayOfWeek.Saturday;
-                    bool horarioValido = ahora.Hour >= 7 && ahora.Hour < 22;
-
-                    esTrasbordo = dentroDeHora && lineaDistinta && diaValido && horarioValido;
+                    esTrasbordo = true;
                 }
             }
 
             double montoFinal = esTrasbordo ? 0 : montoBase;
 
-            bool pagado = tarjeta.Pagar(montoFinal);
+            // Intentar pagar, pasando la TarifaBase para que la franquicia decida cuánto descontar
+            bool pagado = tarjeta.Pagar(montoFinal, tarifaBase);
             if (!pagado)
             {
                 UltimoBoleto = null;
@@ -67,11 +69,8 @@ namespace TarjetaSube
             }
 
             // ACTUALIZAMOS SOLO los campos de trasbordo (NO TOCAMOS los de MedioBoleto ni Gratuito)
-            if (campoFecha != null && campoLinea != null)
-            {
-                campoFecha.SetValue(tarjeta, ahora);
-                campoLinea.SetValue(tarjeta, this.linea);
-            }
+            // Usamos el método de la tarjeta para actualizar el estado de trasbordo
+            tarjeta.ActualizarTrasbordo(ahora, this.linea);
 
             UltimoBoleto = new Boleto(
                 idTarjeta: tarjeta.Id,
@@ -86,5 +85,17 @@ namespace TarjetaSube
 
             return true;
         }
+    }
+
+    // NUEVA CLASE INTERURBANO
+    public class Interurbano : Colectivo
+    {
+        public const double TARIFA_INTERURBANA = 3000;
+
+        public Interurbano(string linea, IClock? clock = null) : base(linea, clock)
+        {
+        }
+
+        public override double ObtenerTarifaBase() => TARIFA_INTERURBANA;
     }
 }

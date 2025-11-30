@@ -13,11 +13,12 @@ namespace TarjetaSube
             _clock = clock ?? new SystemClock();
         }
 
-        public override double ObtenerMontoAPagar(double tarifa) => tarifa; // ← Siempre devuelve tarifa completa
+        public override double ObtenerMontoAPagar(double tarifa) => tarifa; // Siempre devuelve tarifa completa
 
         public override string ObtenerTipo() => "Boleto Gratuito";
 
-        public override bool Pagar(double monto)
+        // CAMBIO: Se agrega tarifaBase
+        public override bool Pagar(double monto, double tarifaBase = 0)
         {
             DateTime ahora = _clock.Now;
             DateTime hoy = ahora.Date;
@@ -37,8 +38,7 @@ namespace TarjetaSube
             bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
             bool aplicaFranquicia = estaEnHorarioValido && _viajesGratisHoy < 2;
 
-            // CORRECCIÓN: Si aplica franquicia paga 0, si no paga 1580 (tarifa completa)
-            double montoAPagar = aplicaFranquicia ? 0 : 1580;
+            double montoAPagar = aplicaFranquicia ? 0 : monto;
 
             // Intentar pagar
             bool pagado = base.Pagar(montoAPagar);

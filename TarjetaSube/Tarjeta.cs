@@ -74,7 +74,8 @@ namespace TarjetaSube
         public virtual double ObtenerMontoAPagar(double tarifa) => tarifa;
         public virtual string ObtenerTipo() => "Tarjeta Normal";
 
-        public virtual bool Pagar(double monto)
+        // CAMBIO: Se agrega tarifaBase a Pagar (valor por defecto 0 para compatibilidad)
+        public virtual bool Pagar(double monto, double tarifaBase = 0)
         {
             // Acreditar primero para usar el saldo disponible al máximo
             AcreditarCarga();
@@ -98,7 +99,7 @@ namespace TarjetaSube
         }
 
         // MÉTODO PARA VERIFICAR TRASBORDO
-        protected bool EsTrasbordoValido(DateTime ahora, string lineaActual)
+        public bool EsTrasbordoValido(DateTime ahora, string lineaActual)
         {
             if (!ultimoViajeTrasbordo.HasValue || string.IsNullOrEmpty(ultimaLineaTrasbordo))
                 return false;
@@ -122,268 +123,16 @@ namespace TarjetaSube
         }
 
         // MÉTODO PARA ACTUALIZAR TRASBORDO
-        protected void ActualizarTrasbordo(DateTime ahora, string lineaActual)
+        public void ActualizarTrasbordo(DateTime ahora, string lineaActual)
         {
             ultimoViajeTrasbordo = ahora;
             ultimaLineaTrasbordo = lineaActual;
         }
     }
-    /*
-    public class MedioBoleto : Tarjeta
-    {
-        private readonly IClock _clock;
-        private DateTime? _ultimoViajeFecha = null;
-        private int _viajesHoy = 0;
 
-        public override double ObtenerMontoAPagar(double tarifa) => tarifa / 2.0;
-        public override string ObtenerTipo() => "Medio Boleto";
+    //---------------------------USO FRECUENTE (Se mantiene igual)---------------------------------//
 
-        public MedioBoleto(IClock? clock = null)
-        {
-            _clock = clock ?? new SystemClock();
-        }
-
-        public override bool Pagar(double monto)
-        {
-            DateTime ahora = _clock.Now;
-            DateTime hoy = ahora.Date;
-
-            if (monto == 0)
-            {
-                return base.Pagar(0);
-            }
-
-            // Reiniciar contador si es un nuevo día
-            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
-            {
-                _viajesHoy = 0;
-            }
-
-            // VERIFICACIÓN CORRECTA DEL HORARIO
-            bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
-            bool aplicaFranquicia = estaEnHorarioValido && _viajesHoy < 2;
-
-            // CORRECCIÓN: NO dividir por 2 otra vez - el monto YA VIENE con descuento
-            // Si NO aplica franquicia, debe pagar tarifa completa (1580)
-            double montoADescontar = aplicaFranquicia ? monto : 1580;
-
-            // Verificar intervalo de 5 minutos
-            if (_ultimoViajeFecha.HasValue)
-            {
-                TimeSpan diferencia = ahora - _ultimoViajeFecha.Value;
-                if (diferencia < TimeSpan.FromMinutes(5))
-                {
-                    return false;
-                }
-            }
-
-            // Intentar pagar
-            bool resultado = base.Pagar(montoADescontar);
-
-            // Actualizar contador SOLO si aplicó franquicia
-            if (resultado && aplicaFranquicia)
-            {
-                _viajesHoy++;
-            }
-
-            if (resultado)
-            {
-                _ultimoViajeFecha = ahora;
-            }
-
-            return resultado;
-        }
-    }
-    
-    public class BoletoGratuito : Tarjeta
-    {
-        private readonly IClock _clock;
-        private DateTime? _ultimoViajeFecha = null;
-        private int _viajesGratisHoy = 0;
-
-        public BoletoGratuito(IClock? clock = null)
-        {
-            _clock = clock ?? new SystemClock();
-        }
-
-        public override double ObtenerMontoAPagar(double tarifa) => tarifa; // ← Siempre devuelve tarifa completa
-
-        public override string ObtenerTipo() => "Boleto Gratuito";
-
-        public override bool Pagar(double monto)
-        {
-            DateTime ahora = _clock.Now;
-            DateTime hoy = ahora.Date;
-
-            if (monto == 0)
-            {
-                return base.Pagar(0);
-            }
-
-            // Reiniciar contador si es un nuevo día
-            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
-            {
-                _viajesGratisHoy = 0;
-            }
-
-            // VERIFICACIÓN CORRECTA DEL HORARIO
-            bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
-            bool aplicaFranquicia = estaEnHorarioValido && _viajesGratisHoy < 2;
-
-            // CORRECCIÓN: Si aplica franquicia paga 0, si no paga 1580 (tarifa completa)
-            double montoAPagar = aplicaFranquicia ? 0 : 1580;
-
-            // Intentar pagar
-            bool pagado = base.Pagar(montoAPagar);
-            if (!pagado) return false;
-
-            // Actualizar estado
-            _ultimoViajeFecha = ahora;
-
-            if (aplicaFranquicia)
-            {
-                _viajesGratisHoy++;
-            }
-
-            return true;
-        }
-    }
-
-    public class FranquiciaCompleta : Tarjeta
-    {
-        public override double ObtenerMontoAPagar(double tarifa) => 0;
-        public override bool Pagar(double monto) => true;
-        public override string ObtenerTipo() => "Franquicia Completa";
-    }
-    */
-    //---------------------------INTERURBANA---------------------------------//
-
-    public class TarjetaInterurbana : Tarjeta ///////////---- interurbano es herencia de colectivo----/////
-    {
-        public override double ObtenerMontoAPagar(double tarifa) => 3000;
-        public override string ObtenerTipo() => "Tarjeta Normal (Interurbana)";
-    }
-
-    public class MedioBoletoInterurbano : Tarjeta
-    {
-        private readonly IClock _clock;
-        private DateTime? _ultimoViajeFecha = null;
-        private int _viajesHoy = 0;
-
-        public MedioBoletoInterurbano(IClock? clock = null)
-        {
-            _clock = clock ?? new SystemClock();
-        }
-
-        public override double ObtenerMontoAPagar(double tarifa) => 1500;
-        public override string ObtenerTipo() => "Medio Boleto (Interurbana)";
-
-        public override bool Pagar(double monto)
-        {
-            DateTime ahora = _clock.Now;
-            DateTime hoy = ahora.Date;
-
-            // Reiniciar contador si es un nuevo día
-            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
-            {
-                _viajesHoy = 0;
-            }
-
-            // VERIFICACIÓN CORRECTA DEL HORARIO
-            bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
-            bool aplicaFranquicia = estaEnHorarioValido && _viajesHoy < 2;
-
-            // CORRECCIÓN: El monto que viene es 1500 (de ObtenerMontoAPagar)
-            // Si NO aplica franquicia, debe pagar 3000 (tarifa completa)
-            double montoADescontar = aplicaFranquicia ? monto : 3000;
-
-            // Verificar intervalo de 5 minutos
-            if (_ultimoViajeFecha.HasValue)
-            {
-                TimeSpan diferencia = ahora - _ultimoViajeFecha.Value;
-                if (diferencia < TimeSpan.FromMinutes(5))
-                {
-                    return false;
-                }
-            }
-
-            // Intentar pagar
-            bool resultado = base.Pagar(montoADescontar);
-
-            // Actualizar contador SOLO si aplicó franquicia
-            if (resultado && aplicaFranquicia)
-            {
-                _viajesHoy++;
-            }
-
-            if (resultado)
-            {
-                _ultimoViajeFecha = ahora;
-            }
-
-            return resultado;
-        }
-    }
-
-    public class BoletoGratuitoInterurbano : Tarjeta
-    {
-        private readonly IClock _clock;
-        private DateTime? _ultimoViajeFecha = null;
-        private int _viajesHoy = 0;
-
-        public BoletoGratuitoInterurbano(IClock? clock = null)
-        {
-            _clock = clock ?? new SystemClock();
-        }
-
-        public override double ObtenerMontoAPagar(double tarifa) => 0;
-        public override string ObtenerTipo() => "Boleto Gratuito (Interurbana)";
-
-        public override bool Pagar(double monto)
-        {
-            DateTime ahora = _clock.Now;
-            DateTime hoy = ahora.Date;
-
-            // Reiniciar contador si es un nuevo día
-            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
-            {
-                _viajesHoy = 0;
-            }
-
-            // VERIFICACIÓN CORRECTA DEL HORARIO
-            bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
-            bool aplicaFranquicia = estaEnHorarioValido && _viajesHoy < 2;
-
-            // CORRECCIÓN: Si aplica franquicia paga 0, si no paga 3000
-            double montoAPagar = aplicaFranquicia ? 0 : 3000;
-
-            // Intentar pagar
-            bool resultado = base.Pagar(montoAPagar);
-
-            if (resultado)
-            {
-                // Actualizar contador SOLO si aplicó franquicia
-                if (aplicaFranquicia)
-                {
-                    _viajesHoy++;
-                }
-                _ultimoViajeFecha = ahora;
-            }
-
-            return resultado;
-        }
-    }
-
-    public class FranquiciaCompletaInterurbana : Tarjeta
-    {
-        public override double ObtenerMontoAPagar(double tarifa) => 0;
-        public override bool Pagar(double monto) => true;
-        public override string ObtenerTipo() => "Franquicia Completa (Interurbana)";
-    }
-
-    //---------------------------USO FRECUENTE---------------------------------//
-
-    public class UsoFrecuente : Tarjeta /////////////////// un descuento de tarjeta -- no aplica a las franquicias
+    public class UsoFrecuente : Tarjeta
     {
         private readonly IClock _clock;
         private int _viajesMes = 0;
@@ -408,22 +157,23 @@ namespace TarjetaSube
 
             // Viajes 1-29: tarifa completa (sin descuento)
             if (proximoViaje >= 1 && proximoViaje <= 29)
-                return tarifa; // 1580
+                return tarifa; // 1580 o 3000
 
             // Viajes 30-59: 20% de descuento
             else if (proximoViaje >= 30 && proximoViaje <= 59)
-                return tarifa * 0.8; // 1264
+                return tarifa * 0.8; // 1264 o 2400
 
             // Viajes 60-80: 25% de descuento
             else if (proximoViaje >= 60 && proximoViaje <= 80)
-                return tarifa * 0.75; // 1185
+                return tarifa * 0.75; // 1185 o 2250
 
             // Viaje 81 en adelante: vuelve a tarifa completa
             else
-                return tarifa; // 1580
+                return tarifa; // 1580 o 3000
         }
 
-        public override bool Pagar(double monto)
+        // CAMBIO: Se ajusta Pagar para recibir la tarifaBase (aunque no se usa aquí)
+        public override bool Pagar(double monto, double tarifaBase = 0)
         {
             DateTime ahora = _clock.Now;
 
@@ -435,6 +185,7 @@ namespace TarjetaSube
                 _añoRegistrado = ahora.Year;
             }
 
+            // El monto que llega ya es el *monto base* (1580 o 3000)
             // Calcular el monto a pagar según el próximo viaje
             double montoADescontar = ObtenerMontoAPagar(monto);
 

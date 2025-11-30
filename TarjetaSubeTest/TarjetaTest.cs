@@ -20,9 +20,13 @@ public class TarjetaTests
     [SetUp]
     public void Setup()
     {
-        colectivo = new Colectivo("144 Roja");
-        colectivoInterurbano = new Colectivo("Línea 500 (Interurbana)");
+        // 1. Inicializar el clock primero
         clock = new FakeClock { Now = new DateTime(2024, 1, 1, 10, 0, 0) };
+
+        // 2. Asignar a los campos de la clase (quitando el tipo 'Colectivo')
+        // Es buena práctica pasar el clock a todos los colectivos para control de tiempo en tests
+        colectivo = new Colectivo("144 Roja", clock);
+        colectivoInterurbano = new Interurbano("Gálvez", clock);
     }
 
     private class FakeClock : IClock
@@ -131,20 +135,26 @@ public class TarjetaTests
     public void Colectivo_PagarCon_RespetaTipoDeTarjeta_CorrectoDescuento()
     {
         var normal = new Tarjeta();
-        var medio = new MedioBoleto();
-        var gratis = new BoletoGratuito();
+        // CORRECCIÓN: Pasar la instancia 'clock' para controlar el tiempo.
+        var medio = new MedioBoleto(clock);
+        // CORRECCIÓN: Pasar la instancia 'clock' para controlar el tiempo.
+        var gratis = new BoletoGratuito(clock);
         var franquicia = new FranquiciaCompleta();
 
         normal.Cargar(10000);
         medio.Cargar(10000);
 
+        // 1. Tarjeta Normal (Paga 1580)
         Assert.That(colectivo.PagarCon(normal), Is.True);
-        Assert.That(normal.Saldo, Is.EqualTo(10000 - 1580).Within(0.01));
+        Assert.That(normal.Saldo, Is.EqualTo(10000 - 1580).Within(0.01)); // Saldo: 8420
 
+        // 2. Medio Boleto (Paga 790)
         Assert.That(colectivo.PagarCon(medio), Is.True);
-        Assert.That(medio.Saldo, Is.EqualTo(10000 - 790).Within(0.01));
+        Assert.That(medio.Saldo, Is.EqualTo(10000 - 790).Within(0.01)); // Saldo: 9210 (CORREGIDO)
 
+        // 3. Boleto Gratuito (Paga 0)
         Assert.That(colectivo.PagarCon(gratis), Is.True);
+        // 4. Franquicia Completa (Paga 0)
         Assert.That(colectivo.PagarCon(franquicia), Is.True);
     }
 
@@ -331,19 +341,24 @@ public class TarjetaTests
         Assert.That(gratuito.Saldo, Is.EqualTo(10000)); // gratis
     }
 
+
+
     // ==================== TESTS DE FRANQUICIAS INTERURBANAS ====================
+
     [Test]
-    public void BoletoGratuitoInterurbano_SeReiniciaAlDiaSiguiente()
+    public void BoletoGratuito_Interurbano_SeReiniciaAlDiaSiguiente()
     {
-        var tarjeta = new BoletoGratuitoInterurbano(clock);
+        // Usamos la clase Tarjeta base, y el Colectivo interurbano (new Interurbano)
+        var tarjeta = new BoletoGratuito(clock);
         tarjeta.Cargar(5000);
 
         // Primer día - 3 viajes (0 + 0 + 3000)
-        colectivoInterurbano.PagarCon(tarjeta);
+        // Colectivo Interurbano (3000)
+        colectivoInterurbano.PagarCon(tarjeta); // Viaje 1: Gratis (Saldo: 5000)
         clock.Now = clock.Now.AddMinutes(10);
-        colectivoInterurbano.PagarCon(tarjeta);
+        colectivoInterurbano.PagarCon(tarjeta); // Viaje 2: Gratis (Saldo: 5000)
         clock.Now = clock.Now.AddMinutes(10);
-        colectivoInterurbano.PagarCon(tarjeta);
+        colectivoInterurbano.PagarCon(tarjeta); // Viaje 3: Paga completo (3000)
         double saldoFinDia1 = tarjeta.Saldo; // 5000 - 3000 = 2000
 
         // Act - Avanzar al día siguiente
@@ -351,66 +366,71 @@ public class TarjetaTests
         colectivoInterurbano.PagarCon(tarjeta); // Primer viaje del nuevo día (gratis)
 
         // Assert
-        Assert.AreEqual(2000, tarjeta.Saldo); // No descuenta, vuelve a ser gratis
+        Assert.AreEqual(2000, tarjeta.Saldo); // No descuenta, se reinicia y vuelve a ser gratis
     }
 
     [Test]
-    public void MedioBoletoInterurbano_SeReiniciaAlDiaSiguiente()
+    public void MedioBoleto_Interurbano_SeReiniciaAlDiaSiguiente()
     {
-        var tarjeta = new MedioBoletoInterurbano(clock);
+        // Usamos la clase Tarjeta base, y el Colectivo interurbano (new Interurbano)
+        var tarjeta = new MedioBoleto(clock);
         tarjeta.Cargar(10000);
 
         // Primer día - 3 viajes (1500 + 1500 + 3000)
-        colectivoInterurbano.PagarCon(tarjeta);
+        // Colectivo Interurbano (3000)
+        colectivoInterurbano.PagarCon(tarjeta); // Viaje 1: Medio (1500)
         clock.Now = clock.Now.AddMinutes(10);
-        colectivoInterurbano.PagarCon(tarjeta);
+        colectivoInterurbano.PagarCon(tarjeta); // Viaje 2: Medio (1500)
         clock.Now = clock.Now.AddMinutes(10);
-        colectivoInterurbano.PagarCon(tarjeta);
-        double saldoFinDia1 = tarjeta.Saldo; // 10000 - 6000 = 4000
+        colectivoInterurbano.PagarCon(tarjeta); // Viaje 3: Completo (3000)
+        double saldoFinDia1 = tarjeta.Saldo; // 10000 - 1500 - 1500 - 3000 = 4000
 
         // Act - Avanzar al día siguiente
         clock.Now = clock.Now.AddDays(1);
         colectivoInterurbano.PagarCon(tarjeta); // Primer viaje del nuevo día (1500)
 
         // Assert
-        Assert.AreEqual(4000 - 1500, tarjeta.Saldo);
+        Assert.AreEqual(4000 - 1500, tarjeta.Saldo); // Vuelve a pagar medio boleto
     }
 
     [Test]
-    public void TarjetasInterurbanas_UsanTarifaCorrectaEnColectivoUrbano()
+    public void TarjetasDeFranquicia_UsanTarifaUrbana_EnColectivoUrbano()
     {
-        // Arrange
-        var tarjetaNormal = new TarjetaInterurbana();
-        var medioBoleto = new MedioBoletoInterurbano(clock);
-        var gratuito = new BoletoGratuitoInterurbano(clock);
+        // Arrange: Usamos las clases unificadas y el colectivo Urbano
+        var tarjetaNormal = new Tarjeta();
+        var medioBoleto = new MedioBoleto(clock);
+        var gratuito = new BoletoGratuito(clock);
 
         tarjetaNormal.Cargar(5000);
         medioBoleto.Cargar(5000);
         gratuito.Cargar(5000);
 
-        // Act - Pagar en colectivo URBANO
+        // Act - Pagar en colectivo URBANO (Tarifa Base = 1580)
         bool pagoNormal = colectivo.PagarCon(tarjetaNormal);
         bool pagoMedio = colectivo.PagarCon(medioBoleto);
         bool pagoGratuito = colectivo.PagarCon(gratuito);
 
-        // Assert - Deberían usar sus tarifas interurbanas
+        // Assert - Deben usar la tarifa URBANA (1580 / 790)
         Assert.IsTrue(pagoNormal);
-        Assert.AreEqual(5000 - 3000, tarjetaNormal.Saldo);
+        Assert.AreEqual(5000 - 1580, tarjetaNormal.Saldo); // Tarifa Normal (1580)
 
         Assert.IsTrue(pagoMedio);
-        Assert.AreEqual(5000 - 1500, medioBoleto.Saldo);
+        // 1580 / 2 = 790
+        Assert.AreEqual(5000 - 790, medioBoleto.Saldo); // Medio Boleto Urbano (790)
 
         Assert.IsTrue(pagoGratuito);
-        Assert.AreEqual(5000, gratuito.Saldo);
+        Assert.AreEqual(5000, gratuito.Saldo); // Gratis
     }
 
     [Test]
-    public void MedioBoletoInterurbano_RespetaRestriccion5Minutos()
+    public void MedioBoleto_Interurbano_RespetaRestriccion5Minutos()
     {
-        var tarjeta = new MedioBoletoInterurbano(clock);
+        // Usamos la clase Tarjeta base, y el Colectivo interurbano (3000)
+        var tarjeta = new MedioBoleto(clock);
         tarjeta.Cargar(5000);
+        const double TARIFA_MEDIO_INTERURBANO = 1500;
 
-        // Primer viaje exitoso
+        // Primer viaje exitoso (1500)
         colectivoInterurbano.PagarCon(tarjeta);
 
         // Act - Segundo viaje en menos de 5 minutos
@@ -419,33 +439,36 @@ public class TarjetaTests
 
         // Assert
         Assert.IsFalse(segundoPago);
-        Assert.AreEqual(5000 - 1500, tarjeta.Saldo);
+        Assert.AreEqual(5000 - TARIFA_MEDIO_INTERURBANO, tarjeta.Saldo);
     }
 
     [Test]
-    public void BoletoGratuitoInterurbano_TercerViajePagaCompleto()
+    public void BoletoGratuito_Interurbano_TercerViajePagaCompleto()
     {
-        var tarjeta = new BoletoGratuitoInterurbano(clock);
+        // Usamos la clase Tarjeta base, y el Colectivo interurbano (3000)
+        var tarjeta = new BoletoGratuito(clock);
         tarjeta.Cargar(5000);
+        const double TARIFA_COMPLETA_INTERURBANA = 3000;
 
         // Primeros dos viajes gratis
         colectivoInterurbano.PagarCon(tarjeta);
         clock.Now = clock.Now.AddMinutes(10);
         colectivoInterurbano.PagarCon(tarjeta);
 
-        // Act - Tercer viaje (paga completo)
+        // Act - Tercer viaje (paga completo 3000)
         clock.Now = clock.Now.AddMinutes(10);
         bool pagoExitoso = colectivoInterurbano.PagarCon(tarjeta);
 
         // Assert
         Assert.IsTrue(pagoExitoso);
-        Assert.AreEqual(5000 - 3000, tarjeta.Saldo); // Verificar que se descontaron 3000
+        Assert.AreEqual(5000 - TARIFA_COMPLETA_INTERURBANA, tarjeta.Saldo);
     }
 
     [Test]
-    public void BoletoGratuitoInterurbano_PrimerosDosViajesGratis()
+    public void BoletoGratuito_Interurbano_PrimerosDosViajesGratis()
     {
-        var tarjeta = new BoletoGratuitoInterurbano(clock);
+        // Usamos la clase Tarjeta base, y el Colectivo interurbano (3000)
+        var tarjeta = new BoletoGratuito(clock);
         tarjeta.Cargar(5000);
 
         // Act - Primer viaje (gratis)
@@ -463,10 +486,13 @@ public class TarjetaTests
     }
 
     [Test]
-    public void MedioBoletoInterurbano_TercerViajePagaCompleto()
+    public void MedioBoleto_Interurbano_TercerViajePagaCompleto()
     {
-        var tarjeta = new MedioBoletoInterurbano(clock);
+        // Usamos la clase Tarjeta base, y el Colectivo interurbano (3000)
+        var tarjeta = new MedioBoleto(clock);
         tarjeta.Cargar(10000);
+        const double TARIFA_MEDIO_INTERURBANO = 1500;
+        const double TARIFA_COMPLETA_INTERURBANA = 3000;
 
         // Act - Primer viaje (1500)
         colectivoInterurbano.PagarCon(tarjeta);
@@ -483,43 +509,47 @@ public class TarjetaTests
         double saldoDespuesTercero = tarjeta.Saldo;
 
         // Assert
-        Assert.AreEqual(10000 - 1500, saldoDespuesPrimero);
-        Assert.AreEqual(8500 - 1500, saldoDespuesSegundo);
-        Assert.AreEqual(7000 - 3000, saldoDespuesTercero);
+        Assert.AreEqual(10000 - TARIFA_MEDIO_INTERURBANO, saldoDespuesPrimero);
+        Assert.AreEqual(8500 - TARIFA_MEDIO_INTERURBANO, saldoDespuesSegundo);
+        Assert.AreEqual(7000 - TARIFA_COMPLETA_INTERURBANA, saldoDespuesTercero);
     }
 
     [Test]
-    public void MedioBoletoInterurbano_PagaMitadDeTarifa()
+    public void MedioBoleto_Interurbano_PagaMitadDeTarifa()
     {
-        // Arrange
-        var tarjeta = new MedioBoletoInterurbano(clock);
+        // Arrange: Usamos la clase MedioBoleto unificada
+        var tarjeta = new MedioBoleto(clock);
         tarjeta.Cargar(5000);
+        const double TARIFA_MEDIO_INTERURBANO = 1500; // 3000 / 2
 
         // Act
         bool pagoExitoso = colectivoInterurbano.PagarCon(tarjeta);
 
         // Assert
         Assert.IsTrue(pagoExitoso);
-        Assert.AreEqual(5000 - 1500, tarjeta.Saldo);
-        Assert.AreEqual("Medio Boleto (Interurbana)", colectivoInterurbano.UltimoBoleto.TipoTarjeta);
-        Assert.AreEqual(1500, colectivoInterurbano.UltimoBoleto.MontoDescontado);
+        Assert.AreEqual(5000 - TARIFA_MEDIO_INTERURBANO, tarjeta.Saldo);
+        // El tipo de tarjeta ya no debe decir "Interurbana", solo el tipo de franquicia
+        Assert.AreEqual("Medio Boleto", colectivoInterurbano.UltimoBoleto.TipoTarjeta);
+        Assert.AreEqual(TARIFA_MEDIO_INTERURBANO, colectivoInterurbano.UltimoBoleto.MontoDescontado);
     }
 
     [Test]
-    public void TarjetaInterurbana_PagaTarifaCompleta()
+    public void TarjetaNormal_Interurbano_PagaTarifaCompleta()
     {
-        // Arrange
-        var tarjeta = new TarjetaInterurbana();
+        // Arrange: Usamos la clase Tarjeta unificada
+        var tarjeta = new Tarjeta();
         tarjeta.Cargar(5000);
+        const double TARIFA_COMPLETA_INTERURBANA = 3000;
 
         // Act
         bool pagoExitoso = colectivoInterurbano.PagarCon(tarjeta);
 
         // Assert
         Assert.IsTrue(pagoExitoso);
-        Assert.AreEqual(5000 - 3000, tarjeta.Saldo);
-        Assert.AreEqual("Tarjeta Normal (Interurbana)", colectivoInterurbano.UltimoBoleto.TipoTarjeta);
-        Assert.AreEqual(3000, colectivoInterurbano.UltimoBoleto.MontoDescontado);
+        Assert.AreEqual(5000 - TARIFA_COMPLETA_INTERURBANA, tarjeta.Saldo);
+        // El tipo de tarjeta ya no debe decir "Interurbana", solo el tipo base
+        Assert.AreEqual("Tarjeta Normal", colectivoInterurbano.UltimoBoleto.TipoTarjeta);
+        Assert.AreEqual(TARIFA_COMPLETA_INTERURBANA, colectivoInterurbano.UltimoBoleto.MontoDescontado);
     }
 
     // ==================== TESTS DE USO FRECUENTE ====================
@@ -653,7 +683,58 @@ public class TarjetaTests
         Assert.That(colectivo144Negra.UltimoBoleto?.EsTrasbordo, Is.True);
         Assert.That(colectivo144Negra.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Medio Boleto")); // opcional
     }
+    /*
+    [Test]
+public void Trasbordo_FallaPorTiempo_AplicaMedioBoleto()
+{
+    var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0)); // Viernes 10:00 (dentro de horario)
+    var medio = new MedioBoleto(clock);
+    medio.Cargar(10000);
 
+    var colectivoA = new Colectivo("144 Roja", clock);
+    var colectivoB = new Colectivo("144 Negra", clock);
+
+    // Primer viaje: paga medio boleto
+    colectivoA.PagarCon(medio);
+    // Saldo: 10000 - 790 = 9210
+
+    // Avanzamos 65 minutos (EXCEDE el límite de 1 hora/60 minutos para transbordo)
+    clock.AdvanceMinutes(65); 
+
+    // Segundo viaje: Falla transbordo, PERO le queda un viaje de medio boleto disponible
+    bool pagado = colectivoB.PagarCon(medio);
+    
+    // Assert
+    Assert.That(pagado, Is.True, "El pago debe ser exitoso.");
+    Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(790), "Debe cobrar Medio Boleto (790) porque falló el transbordo por tiempo.");
+    Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.False, "No debe ser transbordo.");
+    Assert.That(medio.Saldo, Is.EqualTo(9210 - 790).Within(0.01)); // 8420
+}
+
+[Test]
+public void Trasbordo_FallaPorDiaYHora_AplicaMedioBoleto()
+{
+    var clock = new FakeClock(new DateTime(2025, 4, 6, 23, 0, 0)); // Sábado 23:00 (FUERA de horario 7:00-22:00)
+    var medio = new MedioBoleto(clock);
+    medio.Cargar(10000);
+
+    var colectivoA = new Colectivo("144 Roja", clock);
+    var colectivoB = new Colectivo("144 Negra", clock);
+
+    // Primer viaje: FUERA de horario de Franquicia. Paga TARIFA COMPLETA
+    colectivoA.PagarCon(medio);
+    Assert.That(colectivoA.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580));
+
+    clock.AdvanceMinutes(20); 
+
+    // Segundo viaje: Falla transbordo por hora. Falla franquicia por hora. Paga TARIFA COMPLETA
+    colectivoB.PagarCon(medio);
+    
+    // Assert
+    Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580), "Debe cobrar Tarifa Completa (1580) porque falló transbordo y está fuera de horario de franquicia.");
+    Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.False, "No debe ser transbordo.");
+}
+    */
     [Test]
     public void Trasbordo_NoGratuito_SiMismaLinea()
     {
