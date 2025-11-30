@@ -39,7 +39,10 @@ namespace TarjetaSube
             bool estaEnHorarioValido = EsHoraValidaParaFranquicia(ahora);
             bool aplicaFranquicia = estaEnHorarioValido && _viajesHoy < 2;
 
-            double montoADescontar = aplicaFranquicia ? monto : monto * 2;
+            // ANTES: double montoADescontar = aplicaFranquicia ? monto : monto * 2;
+            // AHORA: Si aplica la franquicia, se paga el 'monto' (que es la mitad de la tarifa).
+            //        Si NO aplica, se cobra la 'tarifaBase' completa.
+            double montoADescontar = aplicaFranquicia ? monto : tarifaBase;
 
             // Verificar intervalo de 5 minutos
             if (_ultimoViajeFecha.HasValue)
@@ -66,6 +69,24 @@ namespace TarjetaSube
             }
 
             return resultado;
+        }
+
+        protected new bool EsHoraValidaParaFranquicia(DateTime ahora)
+        {
+            // 1. Días: Lunes (1) a Viernes (5)
+            // NOTA: Se niega la franquicia explícitamente en fin de semana para mayor seguridad.
+            if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
+            {
+                return false;
+            }
+
+            // 2. Horario: de 6:00:00 (incluido) a 22:00:00 (excluido)
+            // Se usa TimeSpan para una verificación de tiempo precisa (incluyendo minutos y segundos).
+            TimeSpan tiempoActual = ahora.TimeOfDay;
+            TimeSpan horaApertura = new TimeSpan(6, 0, 0); // 06:00:00 (inclusive)
+            TimeSpan horaCierre = new TimeSpan(22, 0, 0); // 22:00:00 (exclusive, por el operador <)
+
+            return tiempoActual >= horaApertura && tiempoActual < horaCierre;
         }
     }
 }

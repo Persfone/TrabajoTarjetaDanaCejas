@@ -37,6 +37,7 @@ public class TarjetaTests
         public void AdvanceMinutes(int minutes) => Now = Now.AddMinutes(minutes);
         public void AdvanceDays(int days) => Now = Now.AddDays(days);
         public void AdvanceMonths(int months) => Now = Now.AddMonths(months);
+        public void AdvanceTime(TimeSpan span) => Now = Now.Add(span);
     }
 
     // ==================== TESTS BÁSICOS DE CARGA Y PAGO ====================
@@ -796,7 +797,7 @@ public class TarjetaTests
         Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580));
         Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.False);
     }
-
+    //================================== MAS TEST CASOS MUY EDGE ================================//
     [Test]
     public void Colectivo_EmiteBoletoCorrectoParaCadaTipoDeTarjeta_YDevuelveTrue()
     {
@@ -822,4 +823,106 @@ public class TarjetaTests
         Assert.That(colectivoLocal.UltimoBoleto?.TipoTarjeta, Is.EqualTo("Medio Boleto"));
         Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(790));
     }
+    /*
+    [Test]
+    public void Franquicia_FallaAlPagarJustoAntesDeLaHoraDeApertura()
+    {
+        // Lunes 5:59:59 (No válido: debe cobrar tarifa normal)
+        clock.Now = new DateTime(2025, 4, 7, 5, 59, 59);
+        var medio = new MedioBoleto(clock);
+        medio.Cargar(5000);
+
+        // Act
+        bool pagado = colectivo.PagarCon(medio);
+
+        // Assert
+        Assert.That(pagado, Is.True);
+        // Debe cobrar la tarifa normal (1580)
+        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA).Within(0.01),
+            "Debería cobrar tarifa normal justo antes de las 6:00");
+    }
+    
+    [Test]
+    public void Franquicia_FallaAlPagarJustoEnLaHoraDeCierre()
+    {
+        // Lunes 22:00:00 (No válido: debe cobrar tarifa normal)
+        clock.Now = new DateTime(2025, 4, 7, 22, 1, 0);
+        var medio = new MedioBoleto(clock);
+        medio.Cargar(5000);
+
+        // Act
+        bool pagado = colectivo.PagarCon(medio);
+
+        // Assert
+        Assert.That(pagado, Is.True);
+        // Debe cobrar la tarifa normal (1580)
+        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA).Within(0.01),
+            "Debería cobrar tarifa normal justo a las 22:00");
+    }
+    
+    [Test]
+    public void Franquicia_FallaAlPagarEnFinDeSemana_EnHorarioValido()
+    {
+        // Sábado 10:00:00 (No válido por ser fin de semana)
+        clock.Now = new DateTime(2025, 4, 5, 10, 0, 0);
+        var medio = new MedioBoleto(clock);
+        medio.Cargar(5000);
+
+        // Act
+        bool pagado = colectivo.PagarCon(medio);
+
+        // Assert
+        Assert.That(pagado, Is.True);
+        // Debe cobrar la tarifa normal (1580)
+        Assert.That(colectivo.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA).Within(0.01),
+            "Debería cobrar tarifa normal en fin de semana");
+    }
+    */
+    [Test]
+    public void Trasbordo_FallaSiSeIntentaEnLaMismaLinea()
+    {
+        var clock = new FakeClock(new DateTime(2025, 4, 7, 10, 0, 0)); // Lunes
+        var tarjeta = new Tarjeta(clock);
+        tarjeta.Cargar(10000);
+
+        var colectivoA = new Colectivo("144 Negra", clock);
+
+        // Primer viaje: paga normal (1580)
+        Assert.That(colectivoA.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoA.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA));
+
+        clock.AdvanceMinutes(20); // Tiempo válido para trasbordo
+
+        // Segundo viaje en la misma línea: DEBE FALLAR EL TRASBORDO y COBRAR NORMAL
+        Assert.That(colectivoA.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoA.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA));
+        Assert.That(colectivoA.UltimoBoleto?.EsTrasbordo, Is.False,
+            "No debe aplicar trasbordo en la misma línea");
+    }
+
+    [Test]
+    public void Trasbordo_FallaSiExcedeElLimiteDeUnaHora()
+    {
+        var clock = new FakeClock(new DateTime(2025, 4, 7, 10, 0, 0)); // Lunes
+        var tarjeta = new Tarjeta(clock);
+        tarjeta.Cargar(10000);
+
+        var colectivoA = new Colectivo("144 Negra", clock);
+        var colectivoB = new Colectivo("144 Roja", clock);
+
+        // Primer viaje: paga normal (1580)
+        Assert.That(colectivoA.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoA.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA));
+
+        // Avanzamos 60 minutos y 1 segundo (Excede el límite)
+        clock.AdvanceTime(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
+
+        // Segundo viaje en otra línea: DEBE FALLAR EL TRASBORDO y COBRAR NORMAL
+        Assert.That(colectivoB.PagarCon(tarjeta), Is.True);
+        Assert.That(colectivoB.UltimoBoleto?.MontoDescontado, Is.EqualTo(TARIFA_BASICA));
+        Assert.That(colectivoB.UltimoBoleto?.EsTrasbordo, Is.False,
+            "No debe aplicar trasbordo si excede el límite de 1 hora");
+    }
+
+
 }
