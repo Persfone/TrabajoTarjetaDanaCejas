@@ -559,21 +559,27 @@ public class TarjetaTests
     [Test]
     public void ObtenerMontoAPagar_AplicaDescuentosCorrectamenteSegunRangoDeViajes()
     {
+        // CAMBIO: Se usa Tarjeta en lugar de UsoFrecuente
         var clock = new FakeClock(new DateTime(2025, 11, 15, 10, 0, 0));
-        var tarjeta = new UsoFrecuente(clock);
+        var tarjeta = new Tarjeta(clock);
         var colectivoLocal = new Colectivo("144", clock);
 
+        // Saldo suficiente (mismo setup)
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000);
-        tarjeta.Cargar(30000); // Saldo suficiente
+        tarjeta.Cargar(30000);
 
+        // Viajes 1-29: Tarifa normal (1580)
         for (int i = 1; i <= 29; i++)
         {
             Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+            // Verificar que el monto descontado sea 1580
+            Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
             clock.AdvanceMinutes(10);
         }
 
+        // Viajes 30-59: 20% de descuento (1580 * 0.8 = 1264)
         for (int i = 30; i <= 59; i++)
         {
             Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
@@ -581,6 +587,7 @@ public class TarjetaTests
             clock.AdvanceMinutes(10);
         }
 
+        // Viajes 60-80: 25% de descuento (1580 * 0.75 = 1185)
         for (int i = 60; i <= 80; i++)
         {
             Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
@@ -588,6 +595,7 @@ public class TarjetaTests
             clock.AdvanceMinutes(10);
         }
 
+        // Viaje 81: Vuelve a tarifa normal (1580)
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
     }
@@ -596,7 +604,8 @@ public class TarjetaTests
     public void ContadorDeViajes_SeReiniciaCorrectamenteAlCambiarDeMes()
     {
         var clock = new FakeClock(new DateTime(2025, 11, 30, 23, 50, 0));
-        var tarjeta = new UsoFrecuente(clock);
+        // CAMBIO: Se usa Tarjeta en lugar de UsoFrecuente
+        var tarjeta = new Tarjeta(clock);
         var colectivoLocal = new Colectivo("144", clock);
 
         tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(30000); tarjeta.Cargar(10000);
@@ -621,23 +630,39 @@ public class TarjetaTests
     public void Pagar_ConSaldoInsuficiente_NoIncrementaContadorDeViajes()
     {
         var clock = new FakeClock(new DateTime(2025, 11, 20, 8, 0, 0));
-        var tarjeta = new UsoFrecuente(clock);
+        // CAMBIO: Se usa Tarjeta en lugar de UsoFrecuente
+        var tarjeta = new Tarjeta(clock);
         var colectivoLocal = new Colectivo("144", clock);
 
         tarjeta.Cargar(2000);
 
-        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
-        clock.AdvanceMinutes(10);
+        // Viaje 1 (1580)
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         clock.AdvanceMinutes(10);
 
+        // Saldo después: 2000 - 1580 = 420
+
+        // Viaje 2 (1580) - Pasa a saldo negativo (-1160)
+        Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
+        clock.AdvanceMinutes(10);
+
+        // Saldo después: 420 - 1580 = -1160. Contador = 2.
+
+        // Viaje 3 (1580) - Falla por exceder saldo negativo máximo
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False);
-        Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01));
+        Assert.That(tarjeta.Saldo, Is.EqualTo(-1160).Within(0.01)); // Saldo sin cambios. Contador = 2.
 
-        tarjeta.Cargar(10000);
+        tarjeta.Cargar(10000); // Saldo: -1160 + 10000 = 8840
         clock.AdvanceMinutes(10);
+
+        // Viaje 3 (1580) - Éxito
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.True);
         Assert.That(colectivoLocal.UltimoBoleto?.MontoDescontado, Is.EqualTo(1580).Within(0.01));
+        // Saldo: 8840 - 1580 = 7260. Contador = 3.
+
+        // Comprobar que el siguiente viaje (Viaje 4) sigue siendo Tarifa Normal (1580)
+        clock.AdvanceMinutes(10);
+        Assert.That(tarjeta.ObtenerMontoAPagar(Colectivo.TARIFA_BASICA), Is.EqualTo(1580).Within(0.01));
     }
 
     // ==================== TESTS DE TRASBORDO ====================

@@ -19,15 +19,26 @@ namespace TarjetaSube
         public double Saldo => saldo;
         public double SaldoPendiente => _saldoPendiente;
 
-        // NUEVO: Constructor para inicializar el ID
-        public Tarjeta()
-        {
-            this.Id = Guid.NewGuid();
-        }
+        // CAMPOS PARA USO FRECUENTE
+        private readonly IClock _clock;
+        private int _viajesMes = 0;
+        private int _mesRegistrado = 0;
+        private int _añoRegistrado = 0;
 
         // CAMPOS PARA TRASBORDO
         protected DateTime? ultimoViajeTrasbordo = null;
         protected string? ultimaLineaTrasbordo = null;
+
+        // NUEVO: Constructor para inicializar el ID y el reloj
+        public Tarjeta(IClock? clock = null)
+        {
+            this.Id = Guid.NewGuid();
+            _clock = clock ?? new SystemClock();
+            // Inicializar con el mes y año actual para Uso Frecuente
+            DateTime ahora = _clock.Now;
+            _mesRegistrado = ahora.Month;
+            _añoRegistrado = ahora.Year;
+        }
 
         public bool Cargar(double monto)
         {
@@ -71,17 +82,63 @@ namespace TarjetaSube
             }
         }
 
-        public virtual double ObtenerMontoAPagar(double tarifa) => tarifa;
+        // CAMBIO: Lógica de Uso Frecuente movida aquí
+        public virtual double ObtenerMontoAPagar(double tarifa)
+        {
+            // Solo la clase base (Tarjeta Normal) aplica Uso Frecuente
+            if (this.GetType() != typeof(Tarjeta))
+            {
+                return tarifa;
+            }
+
+            // Calcular el próximo viaje (viajesMes + 1)
+            // NOTA: El contador se actualiza en Pagar
+            int proximoViaje = _viajesMes + 1;
+
+            // Viajes 1-29: tarifa completa (sin descuento)
+            if (proximoViaje >= 1 && proximoViaje <= 29)
+                return tarifa;
+
+            // Viajes 30-59: 20% de descuento
+            else if (proximoViaje >= 30 && proximoViaje <= 59)
+                return tarifa * 0.8;
+
+            // Viajes 60-80: 25% de descuento
+            else if (proximoViaje >= 60 && proximoViaje <= 80)
+                return tarifa * 0.75;
+
+            // Viaje 81 en adelante: vuelve a tarifa completa
+            else
+                return tarifa;
+        }
+
         public virtual string ObtenerTipo() => "Tarjeta Normal";
 
         // CAMBIO: Se agrega tarifaBase a Pagar (valor por defecto 0 para compatibilidad)
         public virtual bool Pagar(double monto, double tarifaBase = 0)
         {
+            // Lógica de Uso Frecuente: Reiniciar contador si es un nuevo mes
+            DateTime ahora = _clock.Now;
+            if (ahora.Month != _mesRegistrado || ahora.Year != _añoRegistrado)
+            {
+                _viajesMes = 0;
+                _mesRegistrado = ahora.Month;
+                _añoRegistrado = ahora.Year;
+            }
+
             // Acreditar primero para usar el saldo disponible al máximo
             AcreditarCarga();
             if (saldo - monto < SALDO_NEGATIVO_MAX) return false;
             saldo -= monto;
             AcreditarCarga();
+
+            // Lógica de Uso Frecuente: Solo incrementar si el pago fue exitoso
+            // Y SOLO si es una Tarjeta Normal (no una franquicia)
+            if (this.GetType() == typeof(Tarjeta))
+            {
+                _viajesMes++;
+            }
+
             return true;
         }
 
@@ -130,77 +187,7 @@ namespace TarjetaSube
         }
     }
 
-    //---------------------------USO FRECUENTE (Se mantiene igual)---------------------------------//
-
-    public class UsoFrecuente : Tarjeta
-    {
-        private readonly IClock _clock;
-        private int _viajesMes = 0;
-        private int _mesRegistrado = 0;
-        private int _añoRegistrado = 0;
-
-        public override string ObtenerTipo() => "Tarjeta Uso Frecuente";
-
-        public UsoFrecuente(IClock? clock = null) : base()
-        {
-            _clock = clock ?? new SystemClock();
-            // Inicializar con el mes y año actual
-            DateTime ahora = _clock.Now;
-            _mesRegistrado = ahora.Month;
-            _añoRegistrado = ahora.Year;
-        }
-
-        public override double ObtenerMontoAPagar(double tarifa)
-        {
-            // Calcular el próximo viaje (viajesMes + 1)
-            int proximoViaje = _viajesMes + 1;
-
-            // Viajes 1-29: tarifa completa (sin descuento)
-            if (proximoViaje >= 1 && proximoViaje <= 29)
-                return tarifa; // 1580 o 3000
-
-            // Viajes 30-59: 20% de descuento
-            else if (proximoViaje >= 30 && proximoViaje <= 59)
-                return tarifa * 0.8; // 1264 o 2400
-
-            // Viajes 60-80: 25% de descuento
-            else if (proximoViaje >= 60 && proximoViaje <= 80)
-                return tarifa * 0.75; // 1185 o 2250
-
-            // Viaje 81 en adelante: vuelve a tarifa completa
-            else
-                return tarifa; // 1580 o 3000
-        }
-
-        // CAMBIO: Se ajusta Pagar para recibir la tarifaBase (aunque no se usa aquí)
-        public override bool Pagar(double monto, double tarifaBase = 0)
-        {
-            DateTime ahora = _clock.Now;
-
-            // VERIFICAR SI CAMBIÓ EL MES/AÑO
-            if (ahora.Month != _mesRegistrado || ahora.Year != _añoRegistrado)
-            {
-                _viajesMes = 0;
-                _mesRegistrado = ahora.Month;
-                _añoRegistrado = ahora.Year;
-            }
-
-            // El monto que llega ya es el *monto base* (1580 o 3000)
-            // Calcular el monto a pagar según el próximo viaje
-            double montoADescontar = ObtenerMontoAPagar(monto);
-
-            // Intentar pagar
-            bool pagado = base.Pagar(montoADescontar);
-
-            // Solo incrementar si el pago fue exitoso
-            if (pagado)
-            {
-                _viajesMes++;
-            }
-
-            return pagado;
-        }
-    }
+    //---------------------------INTERFACES Y CLASES DE SISTEMA (Se mantienen)---------------------------------//
 
     public interface IClock
     {
