@@ -18,6 +18,10 @@ namespace TarjetaSubeTest
             _miBiciTuBici = new MiBiciTuBici(_clock);
         }
 
+        //----------------------------------------------------------------------------------------------------------------//
+        //Se paga la tarifa y se retira una bici exitosamente. Verificando que la tarifa cobrada sea la correcta,
+        //sin demora en la devolución y con el saldo suficiente en la tarjeta.
+
         [Test]
         public void SePagaLaTarifaYSeRetiraUnaBiciExitosamente_VerificandoTarifaCorrecta()
         {
@@ -34,6 +38,8 @@ namespace TarjetaSubeTest
             Assert.AreEqual(0, _miBiciTuBici.UltimoBoleto.MultasAplicadas, "No debería haber multas aplicadas");
         }
 
+        //----------------------------------------------------------------------------------------------------------------//
+        //No se puede retirar la bici. Validando que esto suceda cuando no hay suficiente saldo en la tarjeta teniendo o no una multa pendiente de pagar.
         [Test]
         public void NoSePuedeRetirarLaBici_CuandoNoHaySuficienteSaldo_SinMultaPendiente()
         {
@@ -80,6 +86,8 @@ namespace TarjetaSubeTest
             Assert.AreEqual(1, multasDespues, "Debería mantener 1 multa pendiente después del pago fallido");
         }
 
+        //----------------------------------------------------------------------------------------------------------------//
+        //Se retira una bici con una o varias multas acumuladas.
         [Test]
         public void SeRetiraUnaBici_ConUnaMultaAcumulada()
         {
@@ -135,6 +143,7 @@ namespace TarjetaSubeTest
             Assert.AreEqual(3, _miBiciTuBici.UltimoBoleto.MultasAplicadas, "Debería tener 3 multas aplicadas");
         }
 
+        // ===================================== TESTS EXTRAS ================================= //
         [Test]
         public void SeRetiraBici_ConMedioBoleto_PagaTarifaCompleta()
         {
