@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection; // necesario para acceder a campos protegidos
 
 namespace TarjetaSube
 {
@@ -7,8 +6,8 @@ namespace TarjetaSube
     {
         public const double TARIFA_BASICA = 1580;
 
-        protected readonly string linea; 
-        protected readonly IClock clock; 
+        protected readonly string linea;
+        protected readonly IClock clock;
 
         public Boleto? UltimoBoleto { get; private set; }
 
@@ -33,29 +32,15 @@ namespace TarjetaSube
             // trasbordo
             bool esTrasbordo = false;
 
-            var tipoTarjeta = tarjeta.GetType();
-
-            // uso Reflection para acceder a los campos protegidos de la clase base Tarjeta
-            var campoFecha = typeof(Tarjeta).GetField("ultimoViajeTrasbordo",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            var campoLinea = typeof(Tarjeta).GetField("ultimaLineaTrasbordo",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
-            if (campoFecha != null && campoLinea != null)
+            if (tarjeta.EsTrasbordoValido(ahora, this.linea))
             {
-                var ultimoViaje = (DateTime?)campoFecha.GetValue(tarjeta);
-                var ultimaLinea = (string?)campoLinea.GetValue(tarjeta);
-
-                if (tarjeta.EsTrasbordoValido(ahora, this.linea))
-                {
-                    esTrasbordo = true;
-                }
+                esTrasbordo = true;
             }
 
             double montoFinal = esTrasbordo ? 0 : montoBase;
 
-
             bool pagado = tarjeta.Pagar(montoFinal, tarifaBase);
+
             if (!pagado)
             {
                 UltimoBoleto = null;
@@ -80,7 +65,7 @@ namespace TarjetaSube
     }
 
 
-    public class Interurbano : Colectivo
+    public class Interurbano : Colectivo //nuevo tipo de colectivo INTERURBANO, hereda de Colectivo
     {
         public const double TARIFA_INTERURBANA = 3000;
 
