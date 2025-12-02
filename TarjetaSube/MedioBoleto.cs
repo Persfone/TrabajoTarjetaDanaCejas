@@ -23,7 +23,7 @@ namespace TarjetaSube
 
             if (monto == 0)
             {
-                return base.Pagar(0);
+                return base.Pagar(0); //por si es trasbordo tiene mayor prioridad
             }
 
             // reiniciar contador si es un nuevo día
@@ -63,7 +63,7 @@ namespace TarjetaSube
             return resultado;
         }
 
-        protected new bool EsHoraValidaParaFranquicia(DateTime ahora)
+        protected override bool EsHoraValidaParaFranquicia(DateTime ahora)
         {
 
             if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)

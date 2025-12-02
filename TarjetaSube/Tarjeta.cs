@@ -134,7 +134,7 @@ namespace TarjetaSube
             return true;
         }
 
-        protected static bool EsHoraValidaParaFranquicia(DateTime ahora)
+        protected virtual bool EsHoraValidaParaFranquicia(DateTime ahora)
         {
             //solo aplica de Lunes (1) a Viernes (5)
             if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
@@ -197,7 +197,8 @@ namespace TarjetaSube
 
     //-----------------------------------------------------------------------------------//
 
-    public interface IClock
+    public interface IClock //Permiten controlar el tiempo desde pruebas unitarias, evitando depender directamente de DateTime.Now que es difícil de testear 
+                            //pq siempre devuelte la hora actual del sistema, no se puede congelar el tiempo, los test pueden fallar dependiendo de la hora en que se ejecuten, y mas cosas
     {
         DateTime Now { get; }
     }
