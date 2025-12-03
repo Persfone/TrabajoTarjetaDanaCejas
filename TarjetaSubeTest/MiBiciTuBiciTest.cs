@@ -46,7 +46,7 @@ namespace TarjetaSubeTest
 
             var tarjeta = new Tarjeta();
 
-            bool resultado = _miBiciTuBici.PagarCon(tarjeta);
+            bool resultado = _miBiciTuBici.PagarCon(tarjeta); //saldo 0 - 1777.5 = -1777.5 (excede el límite de -1200)
 
             Assert.IsFalse(resultado, "El pago debería fallar por saldo insuficiente");
             Assert.IsNull(_miBiciTuBici.UltimoBoleto, "No debería generarse un boleto");
@@ -61,7 +61,7 @@ namespace TarjetaSubeTest
 
             //primer retiro exitoso (2000 - 1777.5 = 222.5)
             bool primerResultado = _miBiciTuBici.PagarCon(tarjeta);
-            Assert.IsTrue(primerResultado, "Primer retiro debería ser exitoso");
+            Assert.IsTrue(primerResultado, "Primer retiro exitoso");
 
             //avanzamos 2.5 horas (150 minutos) - genera 1 multa (120-150 minutos = 1 multa)
             _clock.AdvanceMinutes(150);

@@ -95,7 +95,7 @@ public class MedioBoletoPagarConTests
         Assert.That(colectivoLocal.PagarCon(tarjeta), Is.False, "No debería poder pagar antes de los 5 minutos");
         Assert.That(tarjeta.Saldo, Is.EqualTo(saldoEsperado).Within(0.01), "El saldo no debería cambiar cuando el pago es rechazado por tiempo");//0
 
-        // Segundo viaje con medio boleto (790) - aún en el límite de 2 viajes por día
+        // Segundo viaje con medio boleto (790)  aun en el límite de 2 viajes por dia
         clock.AdvanceMinutes(6);
         colectivoLocal.PagarCon(tarjeta);
         saldoEsperado -= 790;
@@ -156,7 +156,7 @@ public class MedioBoletoPagarConTests
     [Test]
     public void Trasbordo_TienePrioridadSobreMedioBoleto_CuandoCorresponde()
     {
-        var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0)); // Día hábil
+        var clock = new FakeClock(new DateTime(2025, 4, 5, 10, 0, 0)); // Dia habil
         var medio = new MedioBoleto(clock);
         medio.Cargar(10000);
 

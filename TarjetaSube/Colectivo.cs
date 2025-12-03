@@ -70,7 +70,8 @@ namespace TarjetaSube
         public const double TARIFA_INTERURBANA = 3000;
 
         public Interurbano(string linea, IClock? clock = null) : base(linea, clock)
-        {
+        {//Constructor que llama al constructor base de Colectivo, no le escribo nada debido a q 
+            //ya todo lo tiene el constructor base
         }
 
         public override double ObtenerTarifaBase() => TARIFA_INTERURBANA;

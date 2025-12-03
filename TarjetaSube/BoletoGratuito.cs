@@ -24,7 +24,7 @@ namespace TarjetaSube
 
             if (monto == 0)
             {
-                return base.Pagar(0);
+                return base.Pagar(0); //prioriza trasbordo si el monto es 0
             }
 
             // reiniciar contador si es un nuevo día

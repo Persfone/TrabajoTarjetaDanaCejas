@@ -174,3 +174,8 @@ namespace TarjetaSube
         */
     }
 }
+
+//La estación de bicicletas debe validar al usuario (la tarjeta),
+//pero también debe gestionar y validar el recurso
+//(la bicicleta) (no respete la S de solid), por lo que necesita un mecanismo para distinguir
+//entre todas las tarjetas que existen

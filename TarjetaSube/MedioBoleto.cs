@@ -27,7 +27,7 @@ namespace TarjetaSube
             }
 
             // reiniciar contador si es un nuevo día
-            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy)
+            if (!_ultimoViajeFecha.HasValue || _ultimoViajeFecha.Value.Date < hoy) //si _UVF no tiene valor o si la fecha es menor a hoy (osea ayer)
             {
                 _viajesHoy = 0;
             }
@@ -63,7 +63,7 @@ namespace TarjetaSube
             return resultado;
         }
 
-        protected override bool EsHoraValidaParaFranquicia(DateTime ahora)
+        protected override bool EsHoraValidaParaFranquicia(DateTime ahora) 
         {
 
             if (ahora.DayOfWeek == DayOfWeek.Saturday || ahora.DayOfWeek == DayOfWeek.Sunday)
